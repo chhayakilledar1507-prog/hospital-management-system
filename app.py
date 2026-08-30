@@ -13,7 +13,7 @@ st.set_page_config(
 # Load ML Model
 # -----------------------------
 
-with open("model/disease_model.pkl", "rb") as f:
+with open("disease_model.pkl", "rb") as f:
     model = pickle.load(f)
 
 # -----------------------------
