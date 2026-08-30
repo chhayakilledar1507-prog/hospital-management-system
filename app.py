@@ -36,7 +36,7 @@ conn = sqlite3.connect(
 # -----------------------------
 
 disease_description = pd.read_csv(
-    "data/Disease_Description.csv",
+    "Disease_Description.csv",
     encoding="latin1"
 )
 
