@@ -28,7 +28,7 @@ with open("vectorizer.pkl", "rb") as f:
 # -----------------------------
 
 conn = sqlite3.connect(
-    "database/hospital.db",
+    "hospital.db",
     check_same_thread=False
 )
 # -----------------------------
