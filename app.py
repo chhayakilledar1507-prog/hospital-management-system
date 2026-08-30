@@ -475,7 +475,7 @@ if menu == "Disease Prediction":
     # -----------------------------
 
     symptom_df = pd.read_csv(
-        "data/Symptom_Weights.csv",
+        "Symptom_Weights.csv",
         header=None,
         names=["Symptom", "Weight"],
         encoding="latin1"
