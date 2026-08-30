@@ -2,6 +2,7 @@ import streamlit as st
 import pickle
 import pandas as pd
 import sqlite3
+from datetime import date
 
 st.set_page_config(
     page_title="Smart Hospital Management System",
@@ -12,44 +13,37 @@ st.set_page_config(
 # -----------------------------
 # Load ML Model
 # -----------------------------
-
 with open("disease_model.pkl", "rb") as f:
     model = pickle.load(f)
 
 # -----------------------------
 # Load Vectorizer
 # -----------------------------
-
 with open("vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
 # -----------------------------
 # Database Connection
 # -----------------------------
-
 conn = sqlite3.connect(
     "hospital.db",
     check_same_thread=False
 )
+
 # -----------------------------
 # Load Disease Description
 # -----------------------------
-
 disease_description = pd.read_csv(
     "Disease_Description.csv",
     encoding="latin1"
 )
-
-# Clean column names
 disease_description.columns = [
     col.strip() for col in disease_description.columns
 ]
 
-
 # -----------------------------
 # Load Disease → Specialist
 # -----------------------------
-
 doctor_disease = pd.read_csv(
     "Doctor_Versus_Disease.csv",
     header=None,
@@ -58,29 +52,25 @@ doctor_disease = pd.read_csv(
 )
 
 doctor_disease["Disease"] = (
-    doctor_disease["Disease"]
-    .astype(str)
+    doctor_disease["Disease"].astype(str)
     .str.replace("\xa0", " ", regex=False)
     .str.strip()
 )
 
 doctor_disease["Specialist"] = (
-    doctor_disease["Specialist"]
-    .astype(str)
+    doctor_disease["Specialist"].astype(str)
     .str.replace("\xa0", " ", regex=False)
     .str.strip()
 )
+
 # -----------------------------
 # Page
 # -----------------------------
-
 st.title("🏥 Smart Hospital Management & Recommendation System")
-
 
 # -----------------------------
 # Sidebar
 # -----------------------------
-
 st.sidebar.title("🏥 Hospital System")
 
 menu = st.sidebar.radio(
@@ -95,11 +85,9 @@ menu = st.sidebar.radio(
     ]
 )
 
-
-# -----------------------------
+# =========================================================
 # Dashboard
-# -----------------------------
-
+# =========================================================
 if menu == "Dashboard":
 
     st.title("📊 Dashboard")
@@ -140,18 +128,18 @@ if menu == "Dashboard":
 
         This system provides:
 
-        🔬 Disease prediction from symptoms  
-        🩺 Specialist recommendation  
-        👨‍⚕️ Available doctor information  
-        👤 Patient management  
-        📅 Appointment booking  
+        🔬 Disease prediction from symptoms
+        🩺 Specialist recommendation
+        👨‍⚕️ Available doctor information
+        👤 Patient management
+        📅 Appointment booking
         📜 Patient history
         """
     )
-        # -----------------------------
-# Appointments
-# -----------------------------
 
+# =========================================================
+# Appointments
+# =========================================================
 elif menu == "Appointments":
 
     st.header("📅 Appointment Management")
@@ -160,6 +148,7 @@ elif menu == "Appointments":
         """
         SELECT patient_id, patient_name
         FROM patients
+        ORDER BY patient_name
         """,
         conn
     )
@@ -168,164 +157,17 @@ elif menu == "Appointments":
         """
         SELECT doctor_id, doctor_name, specialization
         FROM doctors
+        ORDER BY doctor_name
         """,
         conn
-    )# -----------------------------
-# Patient Selection
-# -----------------------------
-
-patient_mode = st.radio(
-    "👤 Patient",
-    ["Existing Patient", "➕ Add New Patient"],
-    horizontal=True,
-    key="appointment_patient_mode"
-)
-
-# -----------------------------
-# Existing Patient
-# -----------------------------
-
-if patient_mode == "Existing Patient":
-
-    patient_options = {
-        f"{row['patient_name']} (ID: {row['patient_id']})":
-        row["patient_id"]
-        for _, row in patients.iterrows()
-    }
-
-    if patient_options:
-
-        selected_patient = st.selectbox(
-            "👤 Select Patient",
-            list(patient_options.keys()),
-            key="appointment_patient"
-        )
-
-        selected_patient_id = patient_options[selected_patient]
-
-    else:
-
-        st.warning("No patients found. Please add a new patient.")
-        selected_patient_id = None
-
-
-# -----------------------------
-# Add New Patient
-# -----------------------------
-
-else:
-
-    st.subheader("➕ New Patient Details")
-
-    new_patient_name = st.text_input(
-        "Patient Name",
-        key="new_patient_name"
     )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        new_patient_age = st.number_input(
-            "Age",
-            min_value=0,
-            max_value=120,
-            value=0,
-            key="new_patient_age"
-        )
-
-    with col2:
-        new_patient_gender = st.selectbox(
-            "Gender",
-            ["Male", "Female", "Other"],
-            key="new_patient_gender"
-        )
-
-    new_patient_phone = st.text_input(
-        "Phone Number",
-        key="new_patient_phone"
-    )
-
-    new_patient_address = st.text_area(
-        "Address",
-        key="new_patient_address"
-    )
-
-    new_patient_symptoms = st.text_area(
-        "Symptoms",
-        key="new_patient_symptoms"
-    )
-
-    if st.button(
-        "💾 Save Patient",
-        use_container_width=True,
-        key="save_new_patient"
-    ):
-
-        if new_patient_name.strip() == "":
-            st.warning("Please enter patient name.")
-
-        else:
-
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                INSERT INTO patients
-                (
-                    patient_name,
-                    age,
-                    gender,
-                    phone,
-                    address,
-                    symptoms,
-                    registration_date
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    new_patient_name.strip(),
-                    new_patient_age,
-                    new_patient_gender,
-                    new_patient_phone,
-                    new_patient_address,
-                    new_patient_symptoms,
-                    appointment_date.strftime("%Y-%m-%d")
-                )
-            )
-
-            conn.commit()
-
-            selected_patient_id = cursor.lastrowid
-
-            st.success(
-                f"Patient added successfully! "
-                f"Patient ID: {selected_patient_id}"
-            )
 
     # -----------------------------
-    # Select Doctor
+    # Appointment Date / Time
     # -----------------------------
-
-    doctor_options = {
-        f"{row['doctor_name']} - {row['specialization']}":
-        row["doctor_id"]
-        for _, row in doctors.iterrows()
-    }
-
-    selected_doctor = st.selectbox(
-        "👨‍⚕️ Select Doctor",
-        list(doctor_options.keys()),
-        key="appointment_doctor"
-    )
-
-    selected_doctor_id = doctor_options[selected_doctor]
-
-        # -----------------------------
-    # Appointment Details
-    # -----------------------------
-
     appointment_date = st.date_input(
         "📅 Appointment Date",
+        value=date.today(),
         key="appointment_date"
     )
 
@@ -334,14 +176,119 @@ else:
         key="appointment_time"
     )
 
+    # -----------------------------
+    # Patient Selection
+    # -----------------------------
+    patient_mode = st.radio(
+        "👤 Patient",
+        ["Existing Patient", "➕ Add New Patient"],
+        horizontal=True,
+        key="appointment_patient_mode"
+    )
+
+    selected_patient_id = None
+
+    if patient_mode == "Existing Patient":
+
+        patient_options = {
+            f"{row['patient_name']} (ID: {row['patient_id']})":
+            row["patient_id"]
+            for _, row in patients.iterrows()
+        }
+
+        if patient_options:
+
+            selected_patient = st.selectbox(
+                "👤 Select Patient",
+                list(patient_options.keys()),
+                key="appointment_patient"
+            )
+
+            selected_patient_id = patient_options[selected_patient]
+
+        else:
+            st.warning("No patients found. Please add a new patient.")
+
+    else:
+
+        st.subheader("➕ New Patient Details")
+
+        new_patient_name = st.text_input(
+            "Patient Name",
+            key="new_patient_name"
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            new_patient_age = st.number_input(
+                "Age",
+                min_value=0,
+                max_value=120,
+                value=0,
+                key="new_patient_age"
+            )
+
+        with col2:
+            new_patient_gender = st.selectbox(
+                "Gender",
+                ["Male", "Female", "Other"],
+                key="new_patient_gender"
+            )
+
+        new_patient_phone = st.text_input(
+            "Phone Number",
+            key="new_patient_phone"
+        )
+
+        new_patient_address = st.text_area(
+            "Address",
+            key="new_patient_address"
+        )
+
+        new_patient_symptoms = st.text_area(
+            "Symptoms",
+            key="new_patient_symptoms"
+        )
+
+        # New patient is saved together with appointment
+        # so no separate Save Patient button is required.
+
+    # -----------------------------
+    # Select Doctor
+    # -----------------------------
+    doctor_options = {
+        f"{row['doctor_name']} - {row['specialization']}":
+        row["doctor_id"]
+        for _, row in doctors.iterrows()
+    }
+
+    if doctor_options:
+
+        selected_doctor = st.selectbox(
+            "👨‍⚕️ Select Doctor",
+            list(doctor_options.keys()),
+            key="appointment_doctor"
+        )
+
+        selected_doctor_id = doctor_options[selected_doctor]
+
+    else:
+
+        st.warning("No doctors found.")
+        selected_doctor_id = None
+
+    # -----------------------------
+    # Appointment Reason
+    # -----------------------------
     reason = st.text_input(
         "📝 Reason for Appointment",
         key="appointment_reason"
     )
-        # -----------------------------
+
+    # -----------------------------
     # Book Appointment
     # -----------------------------
-
     if st.button(
         "📅 Book Appointment",
         use_container_width=True,
@@ -350,39 +297,89 @@ else:
 
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            INSERT INTO appointments
-            (
-                patient_id,
-                doctor_id,
-                appointment_date,
-                appointment_time,
-                status,
-                reason
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                selected_patient_id,
-                selected_doctor_id,
-                appointment_date.strftime("%Y-%m-%d"),
-                appointment_time.strftime("%H:%M"),
-                "Booked",
-                reason
-            )
-        )
+        try:
 
-        conn.commit()
+            # Add new patient first
+            if patient_mode == "Add New Patient":
 
-        st.success(
-            f"Appointment booked successfully! "
-            f"Appointment ID: {cursor.lastrowid}"
-        )
-       # -----------------------------
+                if new_patient_name.strip() == "":
+                    st.warning("Please enter patient name.")
+                    st.stop()
+
+                cursor.execute(
+                    """
+                    INSERT INTO patients
+                    (
+                        patient_name,
+                        age,
+                        gender,
+                        phone,
+                        address,
+                        symptoms,
+                        registration_date
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        new_patient_name.strip(),
+                        new_patient_age,
+                        new_patient_gender,
+                        new_patient_phone,
+                        new_patient_address,
+                        new_patient_symptoms,
+                        appointment_date.strftime("%Y-%m-%d")
+                    )
+                )
+
+                selected_patient_id = cursor.lastrowid
+
+            if selected_patient_id is None:
+                st.warning("Please select or add a patient.")
+                st.stop()
+
+            if selected_doctor_id is None:
+                st.warning("Please select a doctor.")
+                st.stop()
+
+            # Book appointment
+            cursor.execute(
+                """
+                INSERT INTO appointments
+                (
+                    patient_id,
+                    doctor_id,
+                    appointment_date,
+                    appointment_time,
+                    status,
+                    reason
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    selected_patient_id,
+                    selected_doctor_id,
+                    appointment_date.strftime("%Y-%m-%d"),
+                    appointment_time.strftime("%H:%M"),
+                    "Booked",
+                    reason
+                )
+            )
+
+            conn.commit()
+
+            st.success(
+                f"Appointment booked successfully! "
+                f"Appointment ID: {cursor.lastrowid}"
+            )
+
+        except Exception as e:
+
+            conn.rollback()
+            st.error(f"Unable to book appointment: {e}")
+
+    # -----------------------------
     # Appointment List
     # -----------------------------
-
     st.subheader("📋 Booked Appointments")
 
     appointments = pd.read_sql_query(
@@ -415,24 +412,9 @@ else:
             hide_index=True
         )
 
-
-# -----------------------------
+# =========================================================
 # Doctors
-# -----------------------------
-
-elif menu == "Doctors":
-
-    st.header("👨‍⚕️ Doctors")
-
-    doctors = pd.read_sql_query(
-        """
-        SELECT
-            doctor_name,
-            specialization,
-        # -----------------------------
-# Doctors
-# -----------------------------
-
+# =========================================================
 elif menu == "Doctors":
 
     st.header("👨‍⚕️ Doctors")
@@ -454,11 +436,11 @@ elif menu == "Doctors":
         doctors,
         use_container_width=True,
         hide_index=True
-    )  
+    )
+
     # -----------------------------
     # Doctor Duty Schedule
     # -----------------------------
-
     st.subheader("🕒 Doctor Duty Schedule")
 
     shifts = pd.read_sql_query(
@@ -485,10 +467,10 @@ elif menu == "Doctors":
         use_container_width=True,
         hide_index=True
     )
-    # -----------------------------
-# Patients
-# -----------------------------
 
+# =========================================================
+# Patients
+# =========================================================
 elif menu == "Patients":
 
     st.header("👤 Patient Management")
@@ -510,15 +492,18 @@ elif menu == "Patients":
         conn
     )
 
-    st.dataframe(
-        patients,
-        use_container_width=True,
-        hide_index=True
-    )
-    # -----------------------------
-# Patient History
-# -----------------------------
+    if patients.empty:
+        st.info("No patients registered yet.")
+    else:
+        st.dataframe(
+            patients,
+            use_container_width=True,
+            hide_index=True
+        )
 
+# =========================================================
+# Patient History
+# =========================================================
 elif menu == "Patient History":
 
     st.header("📜 Patient History")
@@ -544,32 +529,28 @@ elif menu == "Patient History":
     )
 
     if history.empty:
-
         st.info("No patient history found.")
-
     else:
-
         st.dataframe(
             history,
             use_container_width=True,
             hide_index=True
         )
 
-
-# =====================================
-# Disease Prediction Page
-# =====================================
-
-if menu == "Disease Prediction":
+# =========================================================
+# Disease Prediction
+# =========================================================
+elif menu == "Disease Prediction":
 
     st.title("🔬 Disease Prediction")
 
-    st.write("Select patient and symptoms for disease prediction.")
+    st.write(
+        "Select patient and symptoms for disease prediction."
+    )
 
     # -----------------------------
     # Load Patients
     # -----------------------------
-
     patients_df = pd.read_sql_query(
         """
         SELECT patient_id, patient_name
@@ -579,185 +560,185 @@ if menu == "Disease Prediction":
         conn
     )
 
-    patient_dict = dict(
-        zip(
-            patients_df["patient_name"],
-            patients_df["patient_id"]
+    if patients_df.empty:
+
+        st.warning(
+            "No patients found. Please add a patient first."
         )
-    )
 
-    selected_patient = st.selectbox(
-        "👤 Select Patient",
-        patients_df["patient_name"],
-        key="disease_prediction_patient"
-    )
+    else:
 
-    selected_patient_id = patient_dict[selected_patient]
-
-    st.divider()
-
-    # -----------------------------
-    # Load Symptoms
-    # -----------------------------
-
-    symptom_df = pd.read_csv(
-        "Symptom_Weights.csv",
-        header=None,
-        names=["Symptom", "Weight"],
-        encoding="latin1"
-    )
-
-    symptom_df["Symptom"] = (
-        symptom_df["Symptom"]
-        .astype(str)
-        .str.replace("_", " ", regex=False)
-        .str.strip()
-    )
-
-    all_symptoms = sorted(
-        symptom_df["Symptom"].unique()
-    )
-
-    # -----------------------------
-    # Symptoms Selection
-    # -----------------------------
-
-    selected_symptoms = st.multiselect(
-        "🩺 Select Symptoms",
-        all_symptoms,
-        key="disease_prediction_symptoms"
-    )
-
-    # -----------------------------
-    # Predict Button
-    # -----------------------------
-
-    if st.button(
-        "🔍 Predict Disease",
-        use_container_width=True,
-        key="predict_disease_button"
-    ):
-
-        if len(selected_symptoms) == 0:
-
-            st.warning(
-                "Please select at least one symptom."
+        patient_dict = dict(
+            zip(
+                patients_df["patient_name"],
+                patients_df["patient_id"]
             )
+        )
 
-        else:
+        selected_patient = st.selectbox(
+            "👤 Select Patient",
+            patients_df["patient_name"],
+            key="disease_prediction_patient"
+        )
 
-            symptom_text = " ".join(selected_symptoms)
+        selected_patient_id = patient_dict[selected_patient]
 
-            symptom_vector = vectorizer.transform(
-                [symptom_text]
-            )
+        st.divider()
 
-            predicted_disease = model.predict(
-                symptom_vector
-            )[0]
+        # -----------------------------
+        # Load Symptoms
+        # -----------------------------
+        symptom_df = pd.read_csv(
+            "Symptom_Weights.csv",
+            header=None,
+            names=["Symptom", "Weight"],
+            encoding="latin1"
+        )
 
-            # -----------------------------
-            # Predicted Disease
-            # -----------------------------
+        symptom_df["Symptom"] = (
+            symptom_df["Symptom"]
+            .astype(str)
+            .str.replace("_", " ", regex=False)
+            .str.strip()
+        )
 
-            st.success(
-                f"Predicted Disease: {predicted_disease}"
-            )
+        all_symptoms = sorted(
+            symptom_df["Symptom"].unique()
+        )
 
-            # -----------------------------
-            # Disease Description
-            # -----------------------------
+        # -----------------------------
+        # Symptoms Selection
+        # -----------------------------
+        selected_symptoms = st.multiselect(
+            "🩺 Select Symptoms",
+            all_symptoms,
+            key="disease_prediction_symptoms"
+        )
 
-            description_row = disease_description[
-                disease_description["Disease"]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-                == predicted_disease.strip().lower()
-            ]
+        # -----------------------------
+        # Predict Button
+        # -----------------------------
+        if st.button(
+            "🔍 Predict Disease",
+            use_container_width=True,
+            key="predict_disease_button"
+        ):
 
-            if not description_row.empty:
+            if len(selected_symptoms) == 0:
 
-                description = description_row.iloc[0]["Description"]
-
-                st.subheader("📋 Disease Description")
-                st.info(description)
-
-            else:
-
-                description = "Description not available."
-
-                st.warning(description)
-
-            # -----------------------------
-            # Recommended Specialist
-            # -----------------------------
-
-            specialist_row = doctor_disease[
-                doctor_disease["Disease"]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-                == predicted_disease.strip().lower()
-            ]
-
-            if not specialist_row.empty:
-
-                specialist = specialist_row.iloc[0]["Specialist"]
-
-                st.subheader("🩺 Recommended Specialist")
-                st.success(specialist)
-
-            else:
-
-                specialist = "Specialist not available."
-
-                st.warning(specialist)
-
-            # -----------------------------
-            # Available Doctors
-            # -----------------------------
-
-            st.subheader("👨‍⚕️ Available Doctors")
-
-            available_doctors = pd.read_sql_query(
-                """
-                SELECT
-                    d.doctor_name AS Doctor,
-                    d.specialization AS Specialist,
-                    ds.shift_name AS Shift,
-                    ds.start_time AS Start_Time,
-                    ds.end_time AS End_Time,
-                    d.room_number AS Room,
-                    ds.status AS Status
-                FROM doctor_shifts ds
-                JOIN doctors d
-                ON ds.doctor_id = d.doctor_id
-                WHERE LOWER(TRIM(d.specialization)) = LOWER(TRIM(?))
-                AND ds.duty_date = ?
-                """,
-                conn,
-                params=(specialist, "2026-08-24")
-            )
-
-            if not available_doctors.empty:
-
-                st.dataframe(
-                    available_doctors,
-                    use_container_width=True,
-                    hide_index=True
+                st.warning(
+                    "Please select at least one symptom."
                 )
 
             else:
 
-                st.info(
-                    f"No available {specialist} doctors found for 2026-08-24."
+                symptom_text = " ".join(selected_symptoms)
+
+                symptom_vector = vectorizer.transform(
+                    [symptom_text]
                 )
 
-            # -----------------------------
-            # Save Information
-            # -----------------------------
+                predicted_disease = model.predict(
+                    symptom_vector
+                )[0]
 
-            st.session_state["patient_id"] = selected_patient_id
-            st.session_state["predicted_disease"] = predicted_disease
-            st.session_state["specialist"] = specialist
+                # -----------------------------
+                # Predicted Disease
+                # -----------------------------
+                st.success(
+                    f"Predicted Disease: {predicted_disease}"
+                )
+
+                # -----------------------------
+                # Disease Description
+                # -----------------------------
+                description_row = disease_description[
+                    disease_description["Disease"]
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+                    == predicted_disease.strip().lower()
+                ]
+
+                if not description_row.empty:
+
+                    description = description_row.iloc[0]["Description"]
+
+                    st.subheader("📋 Disease Description")
+                    st.info(description)
+
+                else:
+
+                    description = "Description not available."
+                    st.warning(description)
+
+                # -----------------------------
+                # Recommended Specialist
+                # -----------------------------
+                specialist_row = doctor_disease[
+                    doctor_disease["Disease"]
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+                    == predicted_disease.strip().lower()
+                ]
+
+                if not specialist_row.empty:
+
+                    specialist = specialist_row.iloc[0]["Specialist"]
+
+                    st.subheader("🩺 Recommended Specialist")
+                    st.success(specialist)
+
+                else:
+
+                    specialist = "Specialist not available."
+                    st.warning(specialist)
+
+                # -----------------------------
+                # Available Doctors
+                # -----------------------------
+                st.subheader("👨‍⚕️ Available Doctors")
+
+                available_doctors = pd.read_sql_query(
+                    """
+                    SELECT
+                        d.doctor_name AS Doctor,
+                        d.specialization AS Specialist,
+                        ds.shift_name AS Shift,
+                        ds.start_time AS Start_Time,
+                        ds.end_time AS End_Time,
+                        d.room_number AS Room,
+                        ds.status AS Status
+                    FROM doctor_shifts ds
+                    JOIN doctors d
+                        ON ds.doctor_id = d.doctor_id
+                    WHERE LOWER(TRIM(d.specialization))
+                        = LOWER(TRIM(?))
+                    AND ds.duty_date = ?
+                    """,
+                    conn,
+                    params=(specialist, "2026-08-24")
+                )
+
+                if not available_doctors.empty:
+
+                    st.dataframe(
+                        available_doctors,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                else:
+
+                    st.info(
+                        f"No available {specialist} doctors "
+                        f"found for 2026-08-24."
+                    )
+
+                # -----------------------------
+                # Save Information
+                # -----------------------------
+                st.session_state["patient_id"] = selected_patient_id
+                st.session_state["predicted_disease"] = predicted_disease
+                st.session_state["specialist"] = specialist
