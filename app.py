@@ -379,7 +379,7 @@ else:
             f"Appointment booked successfully! "
             f"Appointment ID: {cursor.lastrowid}"
         )
-            # -----------------------------
+       # -----------------------------
     # Appointment List
     # -----------------------------
 
@@ -408,13 +408,27 @@ else:
 
     if appointments.empty:
         st.info("No appointments booked yet.")
-
     else:
         st.dataframe(
             appointments,
             use_container_width=True,
             hide_index=True
         )
+
+
+# -----------------------------
+# Doctors
+# -----------------------------
+
+elif menu == "Doctors":
+
+    st.header("👨‍⚕️ Doctors")
+
+    doctors = pd.read_sql_query(
+        """
+        SELECT
+            doctor_name,
+            specialization,
         # -----------------------------
 # Doctors
 # -----------------------------
