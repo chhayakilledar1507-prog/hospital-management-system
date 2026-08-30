@@ -20,7 +20,7 @@ with open("disease_model.pkl", "rb") as f:
 # Load Vectorizer
 # -----------------------------
 
-with open("model/vectorizer.pkl", "rb") as f:
+with open("vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
 # -----------------------------
