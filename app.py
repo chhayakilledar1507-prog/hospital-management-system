@@ -51,7 +51,7 @@ disease_description.columns = [
 # -----------------------------
 
 doctor_disease = pd.read_csv(
-    "data/Doctor_Versus_Disease.csv",
+    "Doctor_Versus_Disease.csv",
     header=None,
     names=["Disease", "Specialist"],
     encoding="latin1"
