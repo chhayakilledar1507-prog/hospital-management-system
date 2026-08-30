@@ -170,10 +170,22 @@ elif menu == "Appointments":
         FROM doctors
         """,
         conn
-    )
-            # -----------------------------
-    # Select Patient
-    # -----------------------------
+    )# -----------------------------
+# Patient Selection
+# -----------------------------
+
+patient_mode = st.radio(
+    "👤 Patient",
+    ["Existing Patient", "➕ Add New Patient"],
+    horizontal=True,
+    key="appointment_patient_mode"
+)
+
+# -----------------------------
+# Existing Patient
+# -----------------------------
+
+if patient_mode == "Existing Patient":
 
     patient_options = {
         f"{row['patient_name']} (ID: {row['patient_id']})":
@@ -181,14 +193,114 @@ elif menu == "Appointments":
         for _, row in patients.iterrows()
     }
 
-    selected_patient = st.selectbox(
-        "👤 Select Patient",
-        list(patient_options.keys()),
-        key="appointment_patient"
+    if patient_options:
+
+        selected_patient = st.selectbox(
+            "👤 Select Patient",
+            list(patient_options.keys()),
+            key="appointment_patient"
+        )
+
+        selected_patient_id = patient_options[selected_patient]
+
+    else:
+
+        st.warning("No patients found. Please add a new patient.")
+        selected_patient_id = None
+
+
+# -----------------------------
+# Add New Patient
+# -----------------------------
+
+else:
+
+    st.subheader("➕ New Patient Details")
+
+    new_patient_name = st.text_input(
+        "Patient Name",
+        key="new_patient_name"
     )
 
-    selected_patient_id = patient_options[selected_patient]
+    col1, col2 = st.columns(2)
 
+    with col1:
+        new_patient_age = st.number_input(
+            "Age",
+            min_value=0,
+            max_value=120,
+            value=0,
+            key="new_patient_age"
+        )
+
+    with col2:
+        new_patient_gender = st.selectbox(
+            "Gender",
+            ["Male", "Female", "Other"],
+            key="new_patient_gender"
+        )
+
+    new_patient_phone = st.text_input(
+        "Phone Number",
+        key="new_patient_phone"
+    )
+
+    new_patient_address = st.text_area(
+        "Address",
+        key="new_patient_address"
+    )
+
+    new_patient_symptoms = st.text_area(
+        "Symptoms",
+        key="new_patient_symptoms"
+    )
+
+    if st.button(
+        "💾 Save Patient",
+        use_container_width=True,
+        key="save_new_patient"
+    ):
+
+        if new_patient_name.strip() == "":
+            st.warning("Please enter patient name.")
+
+        else:
+
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO patients
+                (
+                    patient_name,
+                    age,
+                    gender,
+                    phone,
+                    address,
+                    symptoms,
+                    registration_date
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_patient_name.strip(),
+                    new_patient_age,
+                    new_patient_gender,
+                    new_patient_phone,
+                    new_patient_address,
+                    new_patient_symptoms,
+                    appointment_date.strftime("%Y-%m-%d")
+                )
+            )
+
+            conn.commit()
+
+            selected_patient_id = cursor.lastrowid
+
+            st.success(
+                f"Patient added successfully! "
+                f"Patient ID: {selected_patient_id}"
+            )
 
     # -----------------------------
     # Select Doctor
