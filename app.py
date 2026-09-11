@@ -10,6 +10,33 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# =========================================================
+# LOGIN SYSTEM
+# =========================================================
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+
+    st.title("🏥 Smart Hospital Management System")
+    st.subheader("🔐 Login")
+
+    username = st.text_input("👤 Username", key="login_username")
+    password = st.text_input("🔑 Password", type="password", key="login_password")
+
+    if st.button("🔐 Login", use_container_width=True, key="login_button"):
+        if username == "admin" and password == "admin123":
+            st.session_state.logged_in = True
+            st.success("Login successful!")
+            st.rerun()
+        else:
+            st.error("Invalid username or password.")
+
+    st.info("Demo Login — Username: admin | Password: admin123")
+    st.stop()
+
 # -----------------------------
 # Load ML Model
 # -----------------------------
@@ -73,6 +100,10 @@ st.title("🏥 Smart Hospital Management & Recommendation System")
 # -----------------------------
 st.sidebar.title("🏥 Hospital System")
 
+if st.sidebar.button("🚪 Logout", use_container_width=True, key="logout_button"):
+    st.session_state.logged_in = False
+    st.rerun()
+
 menu = st.sidebar.radio(
     "Navigation",
     [
@@ -122,20 +153,16 @@ if menu == "Dashboard":
 
     st.subheader("🏥 Smart Hospital Management System")
 
-    st.write(
-        """
-        Welcome to the Smart Hospital Management & Recommendation System.
+    st.write("Welcome to the Smart Hospital Management & Recommendation System.")
 
-        This system provides:
+    st.subheader("✨ This System Provides")
 
-        🔬 Disease prediction from symptoms
-        🩺 Specialist recommendation
-        👨‍⚕️ Available doctor information
-        👤 Patient management
-        📅 Appointment booking
-        📜 Patient history
-        """
-    )
+    st.markdown("🔬 **Disease Prediction** — Predict possible disease from selected symptoms.")
+    st.markdown("🩺 **Specialist Recommendation** — Recommend a suitable medical specialist.")
+    st.markdown("👨‍⚕️ **Doctor Information** — View doctors and their duty schedules.")
+    st.markdown("👤 **Patient Management** — Add and manage patient information.")
+    st.markdown("📅 **Appointment Booking** — Book and view patient appointments.")
+    st.markdown("📜 **Patient History** — View previous patient visit records.")
 
 # =========================================================
 # Appointments
