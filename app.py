@@ -652,10 +652,27 @@ elif menu == "Reports & Feedback":
 
         st.subheader("📋 Patient Summary")
         st.dataframe(patient, use_container_width=True, hide_index=True)
-        st.subheader("📅 Appointments")
-        st.dataframe(appts, use_container_width=True, hide_index=True) if not appts.empty else st.info("No appointments found.")
-        st.subheader("📜 Medical History")
-        st.dataframe(history, use_container_width=True, hide_index=True) if not history.empty else st.info("No medical history found.")
+      st.subheader("📅 Appointments")
+
+if not appts.empty:
+    st.dataframe(
+        appts,
+        use_container_width=True,
+        hide_index=True
+    )
+else:
+    st.info("No appointments found.")
+
+st.subheader("📜 Medical History")
+
+if not history.empty:
+    st.dataframe(
+        history,
+        use_container_width=True,
+        hide_index=True
+    )
+else:
+    st.info("No medical history found.")
 
         if REPORTLAB_AVAILABLE:
             from io import BytesIO
