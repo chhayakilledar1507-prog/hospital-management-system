@@ -2,6 +2,33 @@ import streamlit as st
 import pickle
 import pandas as pd
 import sqlite3
+from pathlib import Path
+
+# -----------------------------
+# File Paths
+# -----------------------------
+# Works with both:
+# 1. GitHub/Streamlit Cloud files kept in the main project folder
+# 2. Local folders: model/, data/, database/
+BASE_DIR = Path(__file__).resolve().parent
+
+def find_file(filename, folder=None):
+    candidates = []
+
+    if folder:
+        candidates.append(BASE_DIR / folder / filename)
+
+    candidates.append(BASE_DIR / filename)
+
+    for path in candidates:
+        if path.exists():
+            return path
+
+    searched = "\n".join(str(p) for p in candidates)
+    raise FileNotFoundError(
+        f"File not found: {filename}\n"
+        f"Checked these locations:\n{searched}"
+    )
 
 st.set_page_config(
     page_title="Smart Hospital Management System",
@@ -13,14 +40,14 @@ st.set_page_config(
 # Load ML Model
 # -----------------------------
 
-with open("model/disease_model.pkl", "rb") as f:
+with open(find_file("disease_model.pkl", "model"), "rb") as f:
     model = pickle.load(f)
 
 # -----------------------------
 # Load Vectorizer
 # -----------------------------
 
-with open("model/vectorizer.pkl", "rb") as f:
+with open(find_file("vectorizer.pkl", "model"), "rb") as f:
     vectorizer = pickle.load(f)
 
 # -----------------------------
@@ -28,7 +55,7 @@ with open("model/vectorizer.pkl", "rb") as f:
 # -----------------------------
 
 conn = sqlite3.connect(
-    "database/hospital.db",
+    find_file("hospital.db", "database"),
     check_same_thread=False
 )
 # -----------------------------
@@ -36,7 +63,7 @@ conn = sqlite3.connect(
 # -----------------------------
 
 disease_description = pd.read_csv(
-    "data/Disease_Description.csv",
+    find_file("Disease_Description.csv", "data"),
     encoding="latin1"
 )
 
@@ -51,7 +78,7 @@ disease_description.columns = [
 # -----------------------------
 
 doctor_disease = pd.read_csv(
-    "data/Doctor_Versus_Disease.csv",
+    find_file("Doctor_Versus_Disease.csv", "data"),
     header=None,
     names=["Disease", "Specialist"],
     encoding="latin1"
@@ -475,7 +502,7 @@ if menu == "Disease Prediction":
     # -----------------------------
 
     symptom_df = pd.read_csv(
-        "data/Symptom_Weights.csv",
+        find_file("Symptom_Weights.csv", "data"),
         header=None,
         names=["Symptom", "Weight"],
         encoding="latin1"
@@ -594,10 +621,8 @@ if menu == "Disease Prediction":
 
             st.subheader("👨‍⚕️ Available Doctors")
 
-            # Select a duty date.
-            # Doctor availability depends on the duty schedule stored
-            # in the doctor_shifts table. Therefore, doctors are NOT
-            # shown on every date.
+            # Availability is taken from the doctor_shifts table.
+            # Therefore, doctors will NOT appear on every date.
             duty_date = st.date_input(
                 "📅 Check Doctor Availability For",
                 value=pd.to_datetime("2026-08-24").date(),
