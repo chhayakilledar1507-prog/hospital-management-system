@@ -7,9 +7,8 @@ from pathlib import Path
 # -----------------------------
 # File Paths
 # -----------------------------
-# Works with both:
-# 1. GitHub/Streamlit Cloud files kept in the main project folder
-# 2. Local folders: model/, data/, database/
+# Supports both the current GitHub root-file structure and
+# the local model/data/database folder structure.
 BASE_DIR = Path(__file__).resolve().parent
 
 def find_file(filename, folder=None):
@@ -26,8 +25,7 @@ def find_file(filename, folder=None):
 
     searched = "\n".join(str(p) for p in candidates)
     raise FileNotFoundError(
-        f"File not found: {filename}\n"
-        f"Checked these locations:\n{searched}"
+        f"File not found: {filename}\nChecked:\n{searched}"
     )
 
 st.set_page_config(
@@ -35,6 +33,94 @@ st.set_page_config(
     page_icon="🏥",
     layout="wide"
 )
+
+# -----------------------------
+# Professional Login Page
+# -----------------------------
+
+# Demo credentials for the project presentation.
+DEMO_USERNAME = "admin"
+DEMO_PASSWORD = "admin123"
+
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
+if not st.session_state["logged_in"]:
+
+    st.markdown(
+        """
+        <style>
+        .login-title {
+            text-align: center;
+            font-size: 34px;
+            font-weight: 700;
+            margin-top: 35px;
+            margin-bottom: 5px;
+        }
+        .login-subtitle {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 25px;
+        }
+        .login-card {
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #d9e2ec;
+            background: #f8fbff;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="login-title">🏥 Smart Hospital Management System</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="login-subtitle">Secure Hospital Management & Recommendation Portal</div>',
+        unsafe_allow_html=True
+    )
+
+    left, center, right = st.columns([1, 1.35, 1])
+
+    with center:
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+
+        st.subheader("🔐 Sign In")
+        st.write("Login to access the hospital management dashboard.")
+
+        username = st.text_input(
+            "👤 Username",
+            placeholder="Enter username"
+        )
+
+        password = st.text_input(
+            "🔑 Password",
+            type="password",
+            placeholder="Enter password"
+        )
+
+        login_button = st.button(
+            "🚪 Login",
+            use_container_width=True
+        )
+
+        if login_button:
+            if username == DEMO_USERNAME and password == DEMO_PASSWORD:
+                st.session_state["logged_in"] = True
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+
+        st.markdown("---")
+        st.caption("Demo Login")
+        st.caption("Username: admin  |  Password: admin123")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.stop()
 
 # -----------------------------
 # Load ML Model
@@ -109,6 +195,13 @@ st.title("🏥 Smart Hospital Management & Recommendation System")
 # -----------------------------
 
 st.sidebar.title("🏥 Hospital System")
+st.sidebar.success("🟢 Logged in as: Admin")
+
+if st.sidebar.button("🚪 Logout", use_container_width=True):
+    st.session_state["logged_in"] = False
+    st.rerun()
+
+st.sidebar.divider()
 
 menu = st.sidebar.radio(
     "Navigation",
@@ -622,7 +715,7 @@ if menu == "Disease Prediction":
             st.subheader("👨‍⚕️ Available Doctors")
 
             # Availability is taken from the doctor_shifts table.
-            # Therefore, doctors will NOT appear on every date.
+            # Therefore, doctors are not shown on every date.
             duty_date = st.date_input(
                 "📅 Check Doctor Availability For",
                 value=pd.to_datetime("2026-08-24").date(),
