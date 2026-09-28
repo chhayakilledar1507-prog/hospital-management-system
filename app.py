@@ -5,10 +5,10 @@ import sqlite3
 from pathlib import Path
 import io
 
-# Visuals & Statistics साठी
+# Visuals & Statistics sathi
 import plotly.express as px
 
-# PDF जनरेशनसाठी ReportLab
+# PDF Generation sathi ReportLab
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -41,9 +41,9 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Advanced PDF Medical Report Generator
+# Advanced PDF Report & Prescription Generator
 # -----------------------------
-def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, description, specialist):
+def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, description, specialist, medicines="", doctor_notes=""):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
@@ -58,7 +58,7 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
         alignment=1,
         spaceAfter=15
     )
-    story.append(Paragraph("🏥 SMART HOSPITAL MEDICAL REPORT", header_style))
+    story.append(Paragraph("🏥 SMART HOSPITAL MEDICAL REPORT & PRESCRIPTION", header_style))
     story.append(Spacer(1, 10))
 
     # Patient Details Section
@@ -93,7 +93,24 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
         ('PADDING', (0,0), (-1,-1), 8),
     ]))
     story.append(t_diag)
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 15))
+
+    # Prescribed Medicines & Notes
+    if medicines or doctor_notes:
+        story.append(Paragraph("<b>💊 Prescribed Medicines & Doctor Advice</b>", styles['Heading2']))
+        rx_data = [
+            [Paragraph("<b>Rx / Medicines:</b>", styles['Normal']), Paragraph(medicines if medicines else "As advised by doctor.", styles['Normal'])],
+            [Paragraph("<b>Doctor Notes:</b>", styles['Normal']), Paragraph(doctor_notes if doctor_notes else "Rest and follow up after 5 days.", styles['Normal'])]
+        ]
+        t_rx = Table(rx_data, colWidths=[150, 390])
+        t_rx.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#FFFBEA")),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#F6AD55")),
+            ('PADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(t_rx)
+        story.append(Spacer(1, 15))
 
     # Disclaimer / Footer
     footer_style = ParagraphStyle('FooterStyle', parent=styles['Italic'], fontSize=8, textColor=colors.gray, alignment=1)
@@ -103,9 +120,12 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
     buffer.seek(0)
     return buffer
 
+# CSV Export Helper
+def convert_df_to_csv(df):
+    return df.to_csv(index=False).encode('utf-8')
 
 # -----------------------------
-# Login Management
+# Simple Original Login
 # -----------------------------
 DEMO_USERNAME = "admin"
 DEMO_PASSWORD = "admin123"
@@ -143,7 +163,6 @@ conn = sqlite3.connect(
     check_same_thread=False
 )
 
-# Load Datasets
 disease_description = pd.read_csv(find_file("Disease_Description.csv", "data"), encoding="latin1")
 disease_description.columns = [col.strip() for col in disease_description.columns]
 
@@ -152,7 +171,7 @@ doctor_disease["Disease"] = doctor_disease["Disease"].astype(str).str.replace("\
 doctor_disease["Specialist"] = doctor_disease["Specialist"].astype(str).str.replace("\xa0", " ", regex=False).str.strip()
 
 # -----------------------------
-# Sidebar Navigation (Exact Original Structure)
+# Sidebar Navigation (Original)
 # -----------------------------
 st.sidebar.title("🏥 Hospital System")
 
@@ -217,7 +236,6 @@ if menu == "Dashboard":
     st.divider()
     st.subheader("📌 Quick Statistics")
     
-    # Quick Appointment Status Chart
     app_status_df = pd.read_sql_query("SELECT status, COUNT(*) as count FROM appointments GROUP BY status", conn)
     if not app_status_df.empty:
         fig_quick = px.bar(app_status_df, x='status', y='count', color='status', title="Appointment Status Overview")
@@ -226,7 +244,7 @@ if menu == "Dashboard":
         st.info("No appointment statistics available yet.")
 
 # -----------------------------
-# 2. Disease Prediction (Includes PDF Report Feature)
+# 2. Disease Prediction
 # -----------------------------
 elif menu == "Disease Prediction":
     st.header("🔬 Disease Prediction")
@@ -248,6 +266,10 @@ elif menu == "Disease Prediction":
         all_symptoms = sorted(symptom_df["Symptom"].unique())
 
         selected_symptoms = st.multiselect("🩺 Select Symptoms", all_symptoms)
+
+        with st.expander("💊 Add Medicine Prescription & Doctor Notes (Optional)"):
+            rx_medicines = st.text_area("Prescribed Medicines (e.g. Paracetamol 500mg, Amoxicillin)", value="")
+            rx_notes = st.text_area("Doctor Special Advice", value="Take rest, drink warm water, follow up after 3 days.")
 
         if st.button("🔍 Predict Disease"):
             if not selected_symptoms:
@@ -271,7 +293,6 @@ elif menu == "Disease Prediction":
                 st.subheader("🩺 Recommended Specialist")
                 st.success(specialist)
 
-                # Save session state for PDF Download
                 st.session_state["last_prediction"] = {
                     "patient_name": selected_patient_info["patient_name"],
                     "age": selected_patient_info.get("age", "N/A"),
@@ -280,11 +301,12 @@ elif menu == "Disease Prediction":
                     "symptoms": selected_symptoms,
                     "disease": predicted_disease,
                     "description": description,
-                    "specialist": specialist
+                    "specialist": specialist,
+                    "medicines": rx_medicines,
+                    "notes": rx_notes
                 }
 
                 st.subheader("👨‍⚕️ Available Doctors")
-                duty_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
                 available_doctors = pd.read_sql_query(
                     """SELECT d.doctor_name AS Doctor, d.specialization AS Specialist, ds.shift_name AS Shift,
                               ds.start_time AS Start_Time, ds.end_time AS End_Time, d.room_number AS Room
@@ -298,17 +320,17 @@ elif menu == "Disease Prediction":
                 else:
                     st.info(f"No available {specialist} doctors found for today.")
 
-        # Quick PDF Generator right inside Disease Prediction tab
         if "last_prediction" in st.session_state:
             st.divider()
             pred = st.session_state["last_prediction"]
             pdf_bytes = generate_pdf_report(
                 pred["patient_name"], pred["age"], pred["gender"], pred["phone"],
-                pred["symptoms"], pred["disease"], pred["description"], pred["specialist"]
+                pred["symptoms"], pred["disease"], pred["description"], pred["specialist"],
+                pred.get("medicines", ""), pred.get("notes", "")
             )
 
             st.download_button(
-                label="📥 Download Diagnostic PDF Report",
+                label="📥 Download Diagnostic & Prescription PDF Report",
                 data=pdf_bytes,
                 file_name=f"Medical_Report_{pred['patient_name'].replace(' ', '_')}.pdf",
                 mime="application/pdf",
@@ -355,6 +377,14 @@ elif menu == "Appointments":
     )
     st.dataframe(appointments, use_container_width=True, hide_index=True)
 
+    if not appointments.empty:
+        st.download_button(
+            label="📥 Export Appointments List to CSV",
+            data=convert_df_to_csv(appointments),
+            file_name="Appointments_List.csv",
+            mime="text/csv"
+        )
+
 # -----------------------------
 # 4. Doctors
 # -----------------------------
@@ -399,8 +429,25 @@ elif menu == "Patients":
                     st.rerun()
 
     st.subheader("📋 Registered Patients Registry")
+    
+    search_query = st.text_input("🔍 Search Patient by Name or Phone", "")
     patients = pd.read_sql_query("SELECT patient_id, patient_name, age, gender, phone, address, symptoms, registration_date FROM patients ORDER BY patient_id DESC", conn)
+
+    if search_query:
+        patients = patients[
+            patients["patient_name"].str.contains(search_query, case=False, na=False) |
+            patients["phone"].astype(str).str.contains(search_query, case=False, na=False)
+        ]
+
     st.dataframe(patients, use_container_width=True, hide_index=True)
+
+    if not patients.empty:
+        st.download_button(
+            label="📥 Export Patients Registry to CSV",
+            data=convert_df_to_csv(patients),
+            file_name="Patients_Registry.csv",
+            mime="text/csv"
+        )
 
 # -----------------------------
 # 6. Patient History
@@ -416,7 +463,7 @@ elif menu == "Patient History":
     st.dataframe(history, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# 7. Analytics (Dedicated Advanced Analytics Tab)
+# 7. Analytics
 # -----------------------------
 elif menu == "Analytics":
     st.header("📈 Interactive Hospital Visual Analytics")
@@ -442,7 +489,7 @@ elif menu == "Analytics":
         st.plotly_chart(fig3, use_container_width=True)
 
 # -----------------------------
-# 8. Reports & Feedback (PDF Report & Feedback Management)
+# 8. Reports & Feedback
 # -----------------------------
 elif menu == "Reports & Feedback":
     st.header("📑 Reports & Patient Feedback")
@@ -456,11 +503,12 @@ elif menu == "Reports & Feedback":
 
         rep_disease = st.text_input("Diagnosed Disease", value="General Checkup / Undefined")
         rep_specialist = st.text_input("Specialist Recommended", value="General Physician")
-        rep_desc = st.text_area("Medical Report Summary / Doctor Notes", value="Patient requested full medical evaluation report.")
+        rep_meds = st.text_area("Prescribed Medicines", value="Tablet Paracetamol 500mg - Twice daily")
+        rep_desc = st.text_area("Doctor Notes / Summary", value="Patient requested full medical evaluation report.")
 
         pdf_data = generate_pdf_report(
             p_row["patient_name"], p_row.get("age", "N/A"), p_row.get("gender", "N/A"),
-            p_row.get("phone", "N/A"), p_row.get("symptoms", "None"), rep_disease, rep_desc, rep_specialist
+            p_row.get("phone", "N/A"), p_row.get("symptoms", "None"), rep_disease, rep_desc, rep_specialist, rep_meds, rep_desc
         )
 
         st.download_button(
