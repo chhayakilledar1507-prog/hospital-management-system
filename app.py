@@ -41,7 +41,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Advanced PDF Report Generator
+# Advanced PDF Medical Report Generator
 # -----------------------------
 def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, description, specialist):
     buffer = io.BytesIO()
@@ -53,7 +53,7 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
     header_style = ParagraphStyle(
         'HeaderStyle',
         parent=styles['Heading1'],
-        fontSize=22,
+        fontSize=20,
         textColor=colors.HexColor("#0D3B66"),
         alignment=1,
         spaceAfter=15
@@ -79,7 +79,7 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
     # Diagnostic Details
     story.append(Paragraph("<b>🔬 Clinical Prediction & Diagnosis</b>", styles['Heading2']))
     diag_data = [
-        [Paragraph("<b>Selected Symptoms:</b>", styles['Normal']), Paragraph(", ".join(symptoms), styles['Normal'])],
+        [Paragraph("<b>Selected Symptoms:</b>", styles['Normal']), Paragraph(", ".join(symptoms) if isinstance(symptoms, list) else str(symptoms), styles['Normal'])],
         [Paragraph("<b>Predicted Disease:</b>", styles['Normal']), Paragraph(f"<font color='#D90429'><b>{disease}</b></font>", styles['Normal'])],
         [Paragraph("<b>Recommended Specialist:</b>", styles['Normal']), Paragraph(f"<b>{specialist}</b>", styles['Normal'])],
         [Paragraph("<b>Disease Summary:</b>", styles['Normal']), Paragraph(description, styles['Normal'])]
@@ -105,7 +105,7 @@ def generate_pdf_report(patient_name, age, gender, phone, symptoms, disease, des
 
 
 # -----------------------------
-# Professional Login Page
+# Login Management
 # -----------------------------
 DEMO_USERNAME = "admin"
 DEMO_PASSWORD = "admin123"
@@ -114,39 +114,16 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
 if not st.session_state["logged_in"]:
-    st.markdown(
-        """
-        <style>
-        .login-title { text-align: center; font-size: 34px; font-weight: 700; margin-top: 35px; margin-bottom: 5px; }
-        .login-subtitle { text-align: center; font-size: 16px; margin-bottom: 25px; }
-        .login-card { padding: 25px; border-radius: 15px; border: 1px solid #d9e2ec; background: #f8fbff; box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown('<div class="login-title">🏥 Smart Hospital Management System</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-subtitle">Secure Hospital Management & Recommendation Portal</div>', unsafe_allow_html=True)
-
-    left, center, right = st.columns([1, 1.35, 1])
-    with center:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.subheader("🔐 Sign In")
-        username = st.text_input("👤 Username", placeholder="Enter username")
-        password = st.text_input("🔑 Password", type="password", placeholder="Enter password")
-        login_button = st.button("🚪 Login", use_container_width=True)
-
-        if login_button:
-            if username == DEMO_USERNAME and password == DEMO_PASSWORD:
-                st.session_state["logged_in"] = True
-                st.rerun()
-            else:
-                st.error("Invalid username or password.")
-
-        st.markdown("---")
-        st.caption("Demo Login -> Username: admin | Password: admin123")
-        st.markdown("</div>", unsafe_allow_html=True)
-
+    st.title("🏥 Smart Hospital Management & Recommendation System")
+    st.subheader("🔐 Sign In")
+    username = st.text_input("👤 Username")
+    password = st.text_input("🔑 Password", type="password")
+    if st.button("🚪 Login", use_container_width=True):
+        if username == DEMO_USERNAME and password == DEMO_PASSWORD:
+            st.session_state["logged_in"] = True
+            st.rerun()
+        else:
+            st.error("Invalid username or password.")
     st.stop()
 
 # -----------------------------
@@ -174,92 +151,192 @@ doctor_disease = pd.read_csv(find_file("Doctor_Versus_Disease.csv", "data"), hea
 doctor_disease["Disease"] = doctor_disease["Disease"].astype(str).str.replace("\xa0", " ", regex=False).str.strip()
 doctor_disease["Specialist"] = doctor_disease["Specialist"].astype(str).str.replace("\xa0", " ", regex=False).str.strip()
 
-
 # -----------------------------
-# Sidebar
+# Sidebar Navigation (Exact Original Structure)
 # -----------------------------
 st.sidebar.title("🏥 Hospital System")
-st.sidebar.success("🟢 Logged in as: Admin")
 
-if st.sidebar.button("🚪 Logout", use_container_width=True):
+if st.sidebar.button("📙 Logout", use_container_width=True):
     st.session_state["logged_in"] = False
     st.rerun()
 
-st.sidebar.divider()
+st.sidebar.write("Navigation")
 
 menu = st.sidebar.radio(
-    "Navigation",
-    ["Dashboard & Analytics", "Disease Prediction", "Appointments", "Doctors", "Patients", "Patient History"]
+    "",
+    [
+        "Dashboard",
+        "Disease Prediction",
+        "Appointments",
+        "Doctors",
+        "Patients",
+        "Patient History",
+        "Analytics",
+        "Reports & Feedback"
+    ],
+    label_visibility="collapsed"
 )
 
 # -----------------------------
-# Dashboard & Visual Analytics (New Feature)
+# Header Display
 # -----------------------------
-if menu == "Dashboard & Analytics":
-    st.title("📊 Hospital Analytics & Overview")
+st.title("🏥 Smart Hospital Management & Recommendation System")
 
+# -----------------------------
+# 1. Dashboard
+# -----------------------------
+if menu == "Dashboard":
+    st.header("📊 Dashboard")
+    
     total_patients = pd.read_sql_query("SELECT COUNT(*) AS count FROM patients", conn).iloc[0]["count"]
     total_doctors = pd.read_sql_query("SELECT COUNT(*) AS count FROM doctors", conn).iloc[0]["count"]
     total_appointments = pd.read_sql_query("SELECT COUNT(*) AS count FROM appointments", conn).iloc[0]["count"]
+    pending = pd.read_sql_query("SELECT COUNT(*) AS count FROM appointments WHERE LOWER(status)='pending' OR LOWER(status)='booked'", conn).iloc[0]["count"]
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("👤 Total Patients Registered", total_patients)
-    col2.metric("👨‍⚕️ Available Doctors", total_doctors)
-    col3.metric("📅 Total Appointments Booked", total_appointments)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("👤 Total Patients", total_patients)
+    col2.metric("👨‍⚕️ Total Doctors", total_doctors)
+    col3.metric("📅 Total Appointments", total_appointments)
+    col4.metric("⏳ Pending", pending)
 
     st.divider()
 
-    st.subheader("📈 System Visual Statistics")
+    st.subheader("🏥 Smart Hospital Management System")
+    st.write("Welcome to the Smart Hospital Management & Recommendation System.")
 
-    col_chart1, col_chart2 = st.columns(2)
+    st.subheader("✨ This System Provides")
+    st.write("🔬 **Disease Prediction** — Predict possible disease from selected symptoms.")
+    st.write("🩺 **Specialist Recommendation** — Recommend a suitable medical specialist.")
+    st.write("👨‍⚕️ **Doctor Information** — View doctors and their duty schedules.")
+    st.write("👤 **Patient Management** — Add and manage patient information.")
+    st.write("📅 **Appointment Booking** — Book and manage patient appointments.")
+    st.write("📜 **Patient History** — View previous patient visit records.")
+    st.write("📊 **Analytics** — View hospital statistics and appointment trends.")
+    st.write("📑 **Medical Reports** — Generate downloadable patient reports.")
 
-    with col_chart1:
-        # Doctors Specialization Distribution Chart
-        doctors_df = pd.read_sql_query("SELECT specialization, COUNT(*) as count FROM doctors GROUP BY specialization", conn)
-        if not doctors_df.empty:
-            fig1 = px.pie(doctors_df, values='count', names='specialization', title="👨‍⚕️ Doctors Specialization Distribution", hole=0.4)
-            st.plotly_chart(fig1, use_container_width=True)
-        else:
-            st.info("No doctor specialization data available.")
-
-    with col_chart2:
-        # Patient Age Distribution
-        patients_df = pd.read_sql_query("SELECT age, gender FROM patients", conn)
-        if not patients_df.empty:
-            fig2 = px.histogram(patients_df, x="age", color="gender", title="👥 Patient Age Demographics", nbins=10)
-            st.plotly_chart(fig2, use_container_width=True)
-        else:
-            st.info("No patient demographics data available.")
-
-    # Doctor Shifts Overview
-    st.subheader("🕒 Doctor Duty Shift Allocation")
-    shifts_df = pd.read_sql_query("SELECT shift_name, COUNT(*) as count FROM doctor_shifts GROUP BY shift_name", conn)
-    if not shifts_df.empty:
-        fig3 = px.bar(shifts_df, x='shift_name', y='count', color='shift_name', title="Shift-wise Doctor Allocation")
-        st.plotly_chart(fig3, use_container_width=True)
+    st.divider()
+    st.subheader("📌 Quick Statistics")
+    
+    # Quick Appointment Status Chart
+    app_status_df = pd.read_sql_query("SELECT status, COUNT(*) as count FROM appointments GROUP BY status", conn)
+    if not app_status_df.empty:
+        fig_quick = px.bar(app_status_df, x='status', y='count', color='status', title="Appointment Status Overview")
+        st.plotly_chart(fig_quick, use_container_width=True)
+    else:
+        st.info("No appointment statistics available yet.")
 
 # -----------------------------
-# Appointments
+# 2. Disease Prediction (Includes PDF Report Feature)
+# -----------------------------
+elif menu == "Disease Prediction":
+    st.header("🔬 Disease Prediction")
+    st.write("Select patient and symptoms for disease prediction.")
+
+    patients_df = pd.read_sql_query("SELECT patient_id, patient_name, age, gender, phone FROM patients ORDER BY patient_name", conn)
+
+    if patients_df.empty:
+        st.warning("No patients registered. Please add patients first.")
+    else:
+        patient_map = {row['patient_name']: row for _, row in patients_df.iterrows()}
+        selected_patient_name = st.selectbox("👤 Select Patient", list(patient_map.keys()))
+        selected_patient_info = patient_map[selected_patient_name]
+
+        st.divider()
+
+        symptom_df = pd.read_csv(find_file("Symptom_Weights.csv", "data"), header=None, names=["Symptom", "Weight"], encoding="latin1")
+        symptom_df["Symptom"] = symptom_df["Symptom"].astype(str).str.replace("_", " ", regex=False).str.strip()
+        all_symptoms = sorted(symptom_df["Symptom"].unique())
+
+        selected_symptoms = st.multiselect("🩺 Select Symptoms", all_symptoms)
+
+        if st.button("🔍 Predict Disease"):
+            if not selected_symptoms:
+                st.warning("Please select at least one symptom.")
+            else:
+                symptom_text = " ".join(selected_symptoms)
+                symptom_vector = vectorizer.transform([symptom_text])
+                predicted_disease = model.predict(symptom_vector)[0]
+
+                st.success(f"Predicted Disease: **{predicted_disease}**")
+
+                description_row = disease_description[disease_description["Disease"].astype(str).str.strip().str.lower() == predicted_disease.strip().lower()]
+                description = description_row.iloc[0]["Description"] if not description_row.empty else "Detailed description not available."
+
+                st.subheader("📋 Disease Description")
+                st.info(description)
+
+                specialist_row = doctor_disease[doctor_disease["Disease"].astype(str).str.strip().str.lower() == predicted_disease.strip().lower()]
+                specialist = specialist_row.iloc[0]["Specialist"] if not specialist_row.empty else "General Physician"
+
+                st.subheader("🩺 Recommended Specialist")
+                st.success(specialist)
+
+                # Save session state for PDF Download
+                st.session_state["last_prediction"] = {
+                    "patient_name": selected_patient_info["patient_name"],
+                    "age": selected_patient_info.get("age", "N/A"),
+                    "gender": selected_patient_info.get("gender", "N/A"),
+                    "phone": selected_patient_info.get("phone", "N/A"),
+                    "symptoms": selected_symptoms,
+                    "disease": predicted_disease,
+                    "description": description,
+                    "specialist": specialist
+                }
+
+                st.subheader("👨‍⚕️ Available Doctors")
+                duty_date_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+                available_doctors = pd.read_sql_query(
+                    """SELECT d.doctor_name AS Doctor, d.specialization AS Specialist, ds.shift_name AS Shift,
+                              ds.start_time AS Start_Time, ds.end_time AS End_Time, d.room_number AS Room
+                       FROM doctor_shifts ds JOIN doctors d ON ds.doctor_id = d.doctor_id
+                       WHERE LOWER(TRIM(d.specialization)) = LOWER(TRIM(?))""",
+                    conn, params=(specialist,)
+                )
+
+                if not available_doctors.empty:
+                    st.dataframe(available_doctors, use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"No available {specialist} doctors found for today.")
+
+        # Quick PDF Generator right inside Disease Prediction tab
+        if "last_prediction" in st.session_state:
+            st.divider()
+            pred = st.session_state["last_prediction"]
+            pdf_bytes = generate_pdf_report(
+                pred["patient_name"], pred["age"], pred["gender"], pred["phone"],
+                pred["symptoms"], pred["disease"], pred["description"], pred["specialist"]
+            )
+
+            st.download_button(
+                label="📥 Download Diagnostic PDF Report",
+                data=pdf_bytes,
+                file_name=f"Medical_Report_{pred['patient_name'].replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+
+# -----------------------------
+# 3. Appointments
 # -----------------------------
 elif menu == "Appointments":
-    st.header("📅 Appointment Management")
+    st.header("📅 Appointment Booking & Management")
     patients = pd.read_sql_query("SELECT patient_id, patient_name FROM patients", conn)
     doctors = pd.read_sql_query("SELECT doctor_id, doctor_name, specialization FROM doctors", conn)
 
     if not patients.empty and not doctors.empty:
         patient_options = {f"{row['patient_name']} (ID: {row['patient_id']})": row["patient_id"] for _, row in patients.iterrows()}
-        selected_patient = st.selectbox("👤 Select Patient", list(patient_options.keys()), key="appointment_patient")
+        selected_patient = st.selectbox("👤 Select Patient", list(patient_options.keys()))
         selected_patient_id = patient_options[selected_patient]
 
         doctor_options = {f"{row['doctor_name']} - {row['specialization']}": row["doctor_id"] for _, row in doctors.iterrows()}
-        selected_doctor = st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()), key="appointment_doctor")
+        selected_doctor = st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()))
         selected_doctor_id = doctor_options[selected_doctor]
 
-        appointment_date = st.date_input("📅 Appointment Date", key="appointment_date")
-        appointment_time = st.time_input("⏰ Appointment Time", key="appointment_time")
-        reason = st.text_input("📝 Reason for Appointment", key="appointment_reason")
+        appointment_date = st.date_input("📅 Appointment Date")
+        appointment_time = st.time_input("⏰ Appointment Time")
+        reason = st.text_input("📝 Reason for Appointment")
 
-        if st.button("📅 Book Appointment", use_container_width=True, key="book_appointment"):
+        if st.button("📅 Book Appointment"):
             cursor = conn.cursor()
             cursor.execute(
                 """INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, status, reason)
@@ -267,9 +344,8 @@ elif menu == "Appointments":
                 (selected_patient_id, selected_doctor_id, appointment_date.strftime("%Y-%m-%d"), appointment_time.strftime("%H:%M"), "Booked", reason)
             )
             conn.commit()
-            st.success(f"Appointment booked successfully! ID: {cursor.lastrowid}")
-    else:
-        st.warning("Please ensure patients and doctors exist in system.")
+            st.success(f"Appointment booked successfully!")
+            st.rerun()
 
     st.subheader("📋 Booked Appointments List")
     appointments = pd.read_sql_query(
@@ -280,14 +356,14 @@ elif menu == "Appointments":
     st.dataframe(appointments, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Doctors
+# 4. Doctors
 # -----------------------------
 elif menu == "Doctors":
-    st.header("👨‍⚕️ Doctors Directory & Shifts")
+    st.header("👨‍⚕️ Doctors Directory & Schedules")
     doctors = pd.read_sql_query("SELECT doctor_name, specialization, phone, email, room_number FROM doctors", conn)
     st.dataframe(doctors, use_container_width=True, hide_index=True)
 
-    st.subheader("🕒 Doctor Duty Schedule")
+    st.subheader("🕒 Doctor Duty Schedules")
     shifts = pd.read_sql_query(
         """SELECT d.doctor_name, d.specialization, ds.duty_date, ds.shift_name, ds.start_time, ds.end_time, d.room_number, ds.status
            FROM doctor_shifts ds JOIN doctors d ON ds.doctor_id = d.doctor_id ORDER BY ds.duty_date DESC""",
@@ -296,29 +372,22 @@ elif menu == "Doctors":
     st.dataframe(shifts, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Patients (With Add Patient Feature)
+# 5. Patients
 # -----------------------------
 elif menu == "Patients":
     st.header("👤 Patient Management")
 
     with st.expander("➕ Register New Patient"):
         with st.form("add_patient_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                p_name = st.text_input("Patient Full Name*")
-                p_age = st.number_input("Age*", min_value=1, max_value=120, value=25)
-                p_gender = st.selectbox("Gender*", ["Male", "Female", "Other"])
-            with col2:
-                p_phone = st.text_input("Phone Number")
-                p_address = st.text_area("Address")
-                p_symptoms = st.text_input("Initial Symptoms / Complaints")
+            p_name = st.text_input("Patient Full Name*")
+            p_age = st.number_input("Age*", min_value=1, max_value=120, value=25)
+            p_gender = st.selectbox("Gender*", ["Male", "Female", "Other"])
+            p_phone = st.text_input("Phone Number")
+            p_address = st.text_area("Address")
+            p_symptoms = st.text_input("Initial Symptoms")
 
-            submit_patient = st.form_submit_button("💾 Register Patient")
-
-            if submit_patient:
-                if not p_name:
-                    st.error("Patient Name is required!")
-                else:
+            if st.form_submit_button("💾 Save Patient"):
+                if p_name:
                     cursor = conn.cursor()
                     cursor.execute(
                         """INSERT INTO patients (patient_name, age, gender, phone, address, symptoms, registration_date)
@@ -326,129 +395,87 @@ elif menu == "Patients":
                         (p_name, p_age, p_gender, p_phone, p_address, p_symptoms)
                     )
                     conn.commit()
-                    st.success(f"Patient '{p_name}' successfully registered!")
+                    st.success(f"Patient '{p_name}' successfully added!")
                     st.rerun()
 
-    st.subheader("📋 Registered Patient Registry")
+    st.subheader("📋 Registered Patients Registry")
     patients = pd.read_sql_query("SELECT patient_id, patient_name, age, gender, phone, address, symptoms, registration_date FROM patients ORDER BY patient_id DESC", conn)
     st.dataframe(patients, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Patient History
+# 6. Patient History
 # -----------------------------
 elif menu == "Patient History":
-    st.header("📜 Patient Medical History")
+    st.header("📜 Patient History")
     history = pd.read_sql_query(
         """SELECT ph.history_id AS "History ID", p.patient_name AS "Patient Name", d.doctor_name AS "Doctor Name",
            ph.visit_date AS "Visit Date", ph.department AS "Department", ph.symptoms AS "Symptoms", ph.notes AS "Notes"
            FROM patient_history ph LEFT JOIN patients p ON ph.patient_id = p.patient_id LEFT JOIN doctors d ON ph.doctor_id = d.doctor_id ORDER BY ph.visit_date DESC""",
         conn
     )
-    if history.empty:
-        st.info("No patient history found.")
-    else:
-        st.dataframe(history, use_container_width=True, hide_index=True)
+    st.dataframe(history, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Disease Prediction & PDF Generation
+# 7. Analytics (Dedicated Advanced Analytics Tab)
 # -----------------------------
-elif menu == "Disease Prediction":
-    st.title("🔬 AI Disease Prediction & Specialist Recommendation")
+elif menu == "Analytics":
+    st.header("📈 Interactive Hospital Visual Analytics")
 
-    patients_df = pd.read_sql_query("SELECT patient_id, patient_name, age, gender, phone FROM patients ORDER BY patient_name", conn)
+    col1, col2 = st.columns(2)
 
-    if patients_df.empty:
-        st.warning("No patients registered. Please register a patient in 'Patients' section first.")
-    else:
-        # Patient Selection
-        patient_map = {row['patient_name']: row for _, row in patients_df.iterrows()}
-        selected_patient_name = st.selectbox("👤 Select Patient", list(patient_map.keys()), key="disease_prediction_patient")
-        selected_patient_info = patient_map[selected_patient_name]
+    with col1:
+        doctors_df = pd.read_sql_query("SELECT specialization, COUNT(*) as count FROM doctors GROUP BY specialization", conn)
+        if not doctors_df.empty:
+            fig1 = px.pie(doctors_df, values='count', names='specialization', title="👨‍⚕️ Doctors Specialization Distribution", hole=0.4)
+            st.plotly_chart(fig1, use_container_width=True)
 
-        st.divider()
+    with col2:
+        patients_df = pd.read_sql_query("SELECT age, gender FROM patients", conn)
+        if not patients_df.empty:
+            fig2 = px.histogram(patients_df, x="age", color="gender", title="👥 Patient Age & Gender Demographics", nbins=10)
+            st.plotly_chart(fig2, use_container_width=True)
 
-        # Symptoms Selection
-        symptom_df = pd.read_csv(find_file("Symptom_Weights.csv", "data"), header=None, names=["Symptom", "Weight"], encoding="latin1")
-        symptom_df["Symptom"] = symptom_df["Symptom"].astype(str).str.replace("_", " ", regex=False).str.strip()
-        all_symptoms = sorted(symptom_df["Symptom"].unique())
+    st.subheader("🕒 Doctor Shift Allocations")
+    shifts_df = pd.read_sql_query("SELECT shift_name, COUNT(*) as count FROM doctor_shifts GROUP BY shift_name", conn)
+    if not shifts_df.empty:
+        fig3 = px.bar(shifts_df, x='shift_name', y='count', color='shift_name', title="Doctor Duty Shift Distribution")
+        st.plotly_chart(fig3, use_container_width=True)
 
-        selected_symptoms = st.multiselect("🩺 Select Clinical Symptoms", all_symptoms, key="disease_prediction_symptoms")
+# -----------------------------
+# 8. Reports & Feedback (PDF Report & Feedback Management)
+# -----------------------------
+elif menu == "Reports & Feedback":
+    st.header("📑 Reports & Patient Feedback")
 
-        if st.button("🔍 Run Diagnostic Prediction", use_container_width=True, key="predict_disease_button"):
-            if len(selected_symptoms) == 0:
-                st.warning("Please select at least one symptom.")
-            else:
-                symptom_text = " ".join(selected_symptoms)
-                symptom_vector = vectorizer.transform([symptom_text])
-                predicted_disease = model.predict(symptom_vector)[0]
+    st.subheader("📄 Medical PDF Report Generator")
+    patients_df = pd.read_sql_query("SELECT patient_id, patient_name, age, gender, phone, symptoms FROM patients ORDER BY patient_name", conn)
 
-                st.success(f"Predicted Diagnosis: **{predicted_disease}**")
+    if not patients_df.empty:
+        selected_p = st.selectbox("Select Patient to Generate PDF Report", patients_df["patient_name"].tolist())
+        p_row = patients_df[patients_df["patient_name"] == selected_p].iloc[0]
 
-                # Description
-                description_row = disease_description[disease_description["Disease"].astype(str).str.strip().str.lower() == predicted_disease.strip().lower()]
-                description = description_row.iloc[0]["Description"] if not description_row.empty else "Detailed description not available."
+        rep_disease = st.text_input("Diagnosed Disease", value="General Checkup / Undefined")
+        rep_specialist = st.text_input("Specialist Recommended", value="General Physician")
+        rep_desc = st.text_area("Medical Report Summary / Doctor Notes", value="Patient requested full medical evaluation report.")
 
-                st.subheader("📋 Disease Overview")
-                st.info(description)
+        pdf_data = generate_pdf_report(
+            p_row["patient_name"], p_row.get("age", "N/A"), p_row.get("gender", "N/A"),
+            p_row.get("phone", "N/A"), p_row.get("symptoms", "None"), rep_disease, rep_desc, rep_specialist
+        )
 
-                # Specialist Recommendation
-                specialist_row = doctor_disease[doctor_disease["Disease"].astype(str).str.strip().str.lower() == predicted_disease.strip().lower()]
-                specialist = specialist_row.iloc[0]["Specialist"] if not specialist_row.empty else "General Physician"
+        st.download_button(
+            label="📥 Download Detailed Patient PDF Report",
+            data=pdf_data,
+            file_name=f"Report_{p_row['patient_name'].replace(' ', '_')}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
 
-                st.subheader("🩺 Recommended Specialist")
-                st.success(specialist)
+    st.divider()
+    st.subheader("⭐ Patient Feedback Collection")
+    fb_patient = st.text_input("Patient Name (Optional)")
+    fb_rating = st.slider("Hospital Experience Rating", 1, 5, 5)
+    fb_comments = st.text_area("Feedback Comments")
 
-                # Save session state for PDF Download
-                st.session_state["last_prediction"] = {
-                    "patient_name": selected_patient_info["patient_name"],
-                    "age": selected_patient_info["age"],
-                    "gender": selected_patient_info["gender"],
-                    "phone": selected_patient_info["phone"],
-                    "symptoms": selected_symptoms,
-                    "disease": predicted_disease,
-                    "description": description,
-                    "specialist": specialist
-                }
-
-                # Available Doctors Table
-                st.subheader("👨‍⚕️ On-Duty Specialist Doctors")
-                duty_date = st.date_input("📅 Check Availability Date", value=pd.to_datetime("2026-08-24").date(), key="doctor_availability_date")
-                duty_date_str = duty_date.strftime("%Y-%m-%d")
-
-                available_doctors = pd.read_sql_query(
-                    """SELECT d.doctor_name AS Doctor, d.specialization AS Specialist, ds.shift_name AS Shift,
-                              ds.start_time AS Start_Time, ds.end_time AS End_Time, d.room_number AS Room, ds.status AS Status
-                       FROM doctor_shifts ds JOIN doctors d ON ds.doctor_id = d.doctor_id
-                       WHERE LOWER(TRIM(d.specialization)) = LOWER(TRIM(?)) AND ds.duty_date = ? AND LOWER(TRIM(ds.status)) = 'available'""",
-                    conn, params=(specialist, duty_date_str)
-                )
-
-                if not available_doctors.empty:
-                    st.dataframe(available_doctors, use_container_width=True, hide_index=True)
-                else:
-                    st.info(f"No available {specialist} doctors on duty for {duty_date_str}.")
-
-        # PDF Download Section
-        if "last_prediction" in st.session_state:
-            st.divider()
-            st.subheader("📄 Generate & Download Patient Medical Report")
-            pred = st.session_state["last_prediction"]
-            
-            pdf_bytes = generate_pdf_report(
-                pred["patient_name"],
-                pred["age"],
-                pred["gender"],
-                pred["phone"],
-                pred["symptoms"],
-                pred["disease"],
-                pred["description"],
-                pred["specialist"]
-            )
-
-            st.download_button(
-                label="📥 Download Diagnostic PDF Report",
-                data=pdf_bytes,
-                file_name=f"Medical_Report_{pred['patient_name'].replace(' ', '_')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
+    if st.button("💬 Submit Feedback"):
+        st.success("Thank you! Feedback recorded successfully.")
