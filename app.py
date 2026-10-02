@@ -28,7 +28,6 @@ def get_db_connection():
     """Returns a cached SQLite connection and ensures all tables exist."""
     conn = sqlite3.connect("hospital.db", check_same_thread=False)
     
-    # Initialize complete schema if not present
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS patients (
         patient_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -218,7 +217,6 @@ if not st.session_state.logged_in:
     username = st.text_input("👤 Username", key="login_username")
     password = st.text_input("🔑 Password", type="password", key="login_password")
 
-    # Secure credential check with st.secrets fallback
     admin_user = st.secrets.get("ADMIN_USER", "admin")
     admin_pass = st.secrets.get("ADMIN_PASS", "admin123")
 
@@ -270,7 +268,7 @@ if menu == "Dashboard":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("👤 Total Patients", total_patients)
-    c2.metric("👨‍‍⚕️ Total Doctors", total_doctors)
+    c2.metric("👨‍⚕️ Total Doctors", total_doctors)
     c3.metric("📅 Total Appointments", total_appointments)
     c4.metric("⏳ Pending", pending_appointments)
 
@@ -425,7 +423,7 @@ elif menu == "Appointments":
 # DOCTORS
 # =========================================================
 elif menu == "Doctors":
-    st.header("👨‍‍⚕️ Doctors")
+    st.header("👨‍⚕️ Doctors")
     doctors = pd.read_sql_query("SELECT doctor_name, specialization, phone, email, room_number FROM doctors", conn)
     st.dataframe(doctors, use_container_width=True, hide_index=True)
 
@@ -548,7 +546,7 @@ elif menu == "Analytics":
         st.line_chart(trend_df["appointments"])
 
 # =========================================================
-# REPORTS & FEEDBACK
+# REPORTS & FEEDBACK (FIXED SECTION)
 # =========================================================
 elif menu == "Reports & Feedback":
     st.header("🧾 Medical Reports & Patient Feedback")
@@ -567,10 +565,18 @@ elif menu == "Reports & Feedback":
 
         st.subheader("📋 Patient Summary")
         st.dataframe(patient, use_container_width=True, hide_index=True)
+        
         st.subheader("📅 Appointments")
-        st.dataframe(appts, use_container_width=True, hide_index=True) if not appts.empty else st.info("No appointments found.")
+        if not appts.empty:
+            st.dataframe(appts, use_container_width=True, hide_index=True)
+        else:
+            st.info("No appointments found.")
+
         st.subheader("📜 Medical History")
-        st.dataframe(history, use_container_width=True, hide_index=True) if not history.empty else st.info("No medical history found.")
+        if not history.empty:
+            st.dataframe(history, use_container_width=True, hide_index=True)
+        else:
+            st.info("No medical history found.")
 
         if REPORTLAB_AVAILABLE:
             pdf_data = generate_pdf_report(patient, appts)
