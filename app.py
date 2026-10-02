@@ -235,7 +235,6 @@ if not st.session_state.logged_in:
 # MAIN HEADER & SIDEBAR NAVIGATION
 # =========================================================
 
-# Main System Title Header (Top of page)
 st.title("🏥 Smart Hospital Management & Recommendation System")
 
 st.sidebar.title("Navigation")
@@ -258,7 +257,6 @@ menu = st.sidebar.radio(
     ]
 )
 
-# Dynamic Subtitle based on active page
 page_icons = {
     "Dashboard": "📊",
     "Disease Prediction": "🔬",
@@ -283,7 +281,7 @@ if menu == "Dashboard":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("👤 Total Patients", total_patients)
-    c2.metric("👨‍⚕️️ Total Doctors", total_doctors)
+    c2.metric("👨‍⚕ Total Doctors", total_doctors)
     c3.metric("📅 Total Appointments", total_appointments)
     c4.metric("⏳ Pending", pending_appointments)
 
@@ -660,7 +658,7 @@ elif menu == "Disease Prediction":
                 ]
 
                 if not specialist_row.empty:
-                    specialist = specialist_row.iloc[0]["Specialist"]
+                    specialist = specialist_row.iloc[0]["Specialist"].strip()
                     st.markdown("### 🩺 Recommended Specialist")
                     st.success(specialist)
                 else:
@@ -669,6 +667,8 @@ elif menu == "Disease Prediction":
 
                 # Available Doctors
                 st.markdown("### 👨‍⚕️ Available Doctors")
+
+                # Flexible Query using LIKE & LOWER
                 available_doctors = pd.read_sql_query(
                     """
                     SELECT
@@ -679,19 +679,41 @@ elif menu == "Disease Prediction":
                         ds.end_time AS End_Time,
                         d.room_number AS Room,
                         ds.status AS Status
-                    FROM doctor_shifts ds
-                    JOIN doctors d ON ds.doctor_id = d.doctor_id
-                    WHERE LOWER(TRIM(d.specialization)) = LOWER(TRIM(?))
-                    AND ds.duty_date = ?
+                    FROM doctors d
+                    LEFT JOIN doctor_shifts ds ON d.doctor_id = ds.doctor_id
+                    WHERE LOWER(TRIM(d.specialization)) LIKE LOWER(?)
                     """,
                     conn,
-                    params=(specialist, date.today().strftime("%Y-%m-%d"))
+                    params=(f"%{specialist}%",)
                 )
+
+                # Fallback: Search all doctors if exact specialization filter returns 0
+                if available_doctors.empty or available_doctors["Doctor"].isna().all():
+                    available_doctors = pd.read_sql_query(
+                        """
+                        SELECT
+                            doctor_name AS Doctor,
+                            specialization AS Specialist,
+                            phone AS Phone,
+                            email AS Email,
+                            room_number AS Room
+                        FROM doctors
+                        WHERE LOWER(TRIM(specialization)) LIKE LOWER(?)
+                        """,
+                        conn,
+                        params=(f"%{specialist}%",)
+                    )
 
                 if not available_doctors.empty:
                     st.dataframe(available_doctors, use_container_width=True, hide_index=True)
                 else:
-                    st.info(f"No available {specialist} doctors found for today.")
+                    # Fallback to display all doctors in the system if no specific match
+                    all_docs = pd.read_sql_query("SELECT doctor_name AS Doctor, specialization AS Specialist, room_number AS Room FROM doctors", conn)
+                    if not all_docs.empty:
+                        st.info(f"No specific '{specialist}' found in database. Here is the list of all available doctors:")
+                        st.dataframe(all_docs, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No doctors registered in database yet. Please add doctors under 'Doctors' menu.")
 
                 st.session_state["patient_id"] = selected_patient_id
                 st.session_state["predicted_disease"] = predicted_disease
