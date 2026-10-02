@@ -666,37 +666,39 @@ elif menu == "Disease Prediction":
                     st.warning("Specific specialist mapping not available; recommending General Physician.")
 
                 # Available Doctors
-                st.markdown("### 👨‍⚕️ Available Doctors")
+                st.markdown("### 👨‍‍⚕️ Available Doctors")
 
-                # Flexible Query using LIKE & LOWER
+                # Clean query with GROUP BY and DISTINCT filtering to prevent multiple duplicate rows
                 available_doctors = pd.read_sql_query(
                     """
                     SELECT
                         d.doctor_name AS Doctor,
                         d.specialization AS Specialist,
-                        ds.shift_name AS Shift,
-                        ds.start_time AS Start_Time,
-                        ds.end_time AS End_Time,
+                        COALESCE(ds.shift_name, 'General') AS Shift,
+                        COALESCE(ds.start_time, '09:00') AS Start_Time,
+                        COALESCE(ds.end_time, '17:00') AS End_Time,
                         d.room_number AS Room,
-                        ds.status AS Status
+                        COALESCE(ds.status, 'Available') AS Status
                     FROM doctors d
                     LEFT JOIN doctor_shifts ds ON d.doctor_id = ds.doctor_id
                     WHERE LOWER(TRIM(d.specialization)) LIKE LOWER(?)
+                    GROUP BY d.doctor_id
                     """,
                     conn,
                     params=(f"%{specialist}%",)
                 )
 
-                # Fallback: Search all doctors if exact specialization filter returns 0
-                if available_doctors.empty or available_doctors["Doctor"].isna().all():
+                if available_doctors.empty:
                     available_doctors = pd.read_sql_query(
                         """
                         SELECT
                             doctor_name AS Doctor,
                             specialization AS Specialist,
-                            phone AS Phone,
-                            email AS Email,
-                            room_number AS Room
+                            'General' AS Shift,
+                            '09:00' AS Start_Time,
+                            '17:00' AS End_Time,
+                            room_number AS Room,
+                            'Available' AS Status
                         FROM doctors
                         WHERE LOWER(TRIM(specialization)) LIKE LOWER(?)
                         """,
@@ -704,11 +706,16 @@ elif menu == "Disease Prediction":
                         params=(f"%{specialist}%",)
                     )
 
+                # Remove duplicates if any
+                available_doctors = available_doctors.drop_duplicates(subset=["Doctor", "Specialist"])
+
                 if not available_doctors.empty:
                     st.dataframe(available_doctors, use_container_width=True, hide_index=True)
                 else:
-                    # Fallback to display all doctors in the system if no specific match
-                    all_docs = pd.read_sql_query("SELECT doctor_name AS Doctor, specialization AS Specialist, room_number AS Room FROM doctors", conn)
+                    all_docs = pd.read_sql_query(
+                        "SELECT doctor_name AS Doctor, specialization AS Specialist, room_number AS Room FROM doctors", 
+                        conn
+                    ).drop_duplicates()
                     if not all_docs.empty:
                         st.info(f"No specific '{specialist}' found in database. Here is the list of all available doctors:")
                         st.dataframe(all_docs, use_container_width=True, hide_index=True)
