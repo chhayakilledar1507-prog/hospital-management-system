@@ -232,17 +232,20 @@ if not st.session_state.logged_in:
     st.stop()
 
 # =========================================================
-# NAVIGATION & SIDEBAR
+# MAIN HEADER & SIDEBAR NAVIGATION
 # =========================================================
 
-st.sidebar.title("🏥 Smart Hospital Management & Recommendation System")
+# Main System Title Header (Displays top of every page)
+st.title("🏥 Smart Hospital Management & Recommendation System")
+
+st.sidebar.title("Navigation")
 
 if st.sidebar.button("🚪 Logout", use_container_width=True, key="logout_button"):
     st.session_state.logged_in = False
     st.rerun()
 
 menu = st.sidebar.radio(
-    "Navigation",
+    "Select Option",
     [
         "Dashboard",
         "Disease Prediction",
@@ -255,12 +258,12 @@ menu = st.sidebar.radio(
     ]
 )
 
+st.divider()
+
 # =========================================================
 # DASHBOARD
 # =========================================================
 if menu == "Dashboard":
-    st.title("📊 Dashboard")
-
     total_patients = pd.read_sql_query("SELECT COUNT(*) AS count FROM patients", conn).iloc[0]["count"]
     total_doctors = pd.read_sql_query("SELECT COUNT(*) AS count FROM doctors", conn).iloc[0]["count"]
     total_appointments = pd.read_sql_query("SELECT COUNT(*) AS count FROM appointments", conn).iloc[0]["count"]
@@ -273,13 +276,12 @@ if menu == "Dashboard":
     c4.metric("⏳ Pending", pending_appointments)
 
     st.divider()
-    st.subheader("🏥 Smart Hospital Management & Recommendation System")
-    st.write("Welcome to the Smart Hospital Management & Recommendation System.")
+    st.write("Welcome to the Smart Hospital Management System.")
 
     st.subheader("✨ Key Features")
     st.markdown("🔬 **Disease Prediction** — Predict possible diseases based on symptoms.")
     st.markdown("🩺 **Specialist Recommendation** — Recommends matching medical specialists.")
-    st.markdown("👨‍⚕️️ **Doctor Management** — Schedule and duty roster monitoring.")
+    st.markdown("👨‍⚕ **Doctor Management** — Schedule and duty roster monitoring.")
     st.markdown("👤 **Patient Records** — Complete intake and demographic tracking.")
     st.markdown("📅 **Appointments** — Integrated scheduling and status tracking.")
 
@@ -295,8 +297,6 @@ if menu == "Dashboard":
 # APPOINTMENTS
 # =========================================================
 elif menu == "Appointments":
-    st.header("📅 Appointment Management")
-
     patients = pd.read_sql_query("SELECT patient_id, patient_name FROM patients ORDER BY patient_name", conn)
     doctors = pd.read_sql_query("SELECT doctor_id, doctor_name, specialization FROM doctors ORDER BY doctor_name", conn)
 
@@ -327,7 +327,7 @@ elif menu == "Appointments":
 
     doctor_options = {f"{row['doctor_name']} - {row['specialization']}": row["doctor_id"] for _, row in doctors.iterrows()}
     if doctor_options:
-        selected_doctor = st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()), key="appointment_doctor")
+        selected_doctor = st.selectbox("👨‍‍⚕️ Select Doctor", list(doctor_options.keys()), key="appointment_doctor")
         selected_doctor_id = doctor_options[selected_doctor]
     else:
         st.warning("No doctors found.")
@@ -423,7 +423,6 @@ elif menu == "Appointments":
 # DOCTORS
 # =========================================================
 elif menu == "Doctors":
-    st.header("👨‍⚕️ Doctors")
     doctors = pd.read_sql_query("SELECT doctor_name, specialization, phone, email, room_number FROM doctors", conn)
     st.dataframe(doctors, use_container_width=True, hide_index=True)
 
@@ -445,8 +444,6 @@ elif menu == "Doctors":
 # PATIENTS
 # =========================================================
 elif menu == "Patients":
-    st.header("👤 Patient Management")
-
     search = st.text_input("🔎 Search Patient by Name or Phone", key="patient_search")
     query = "SELECT patient_id, patient_name, age, gender, phone, address, symptoms, registration_date FROM patients"
     params = ()
@@ -494,8 +491,6 @@ elif menu == "Patients":
 # PATIENT HISTORY
 # =========================================================
 elif menu == "Patient History":
-    st.header("📜 Patient History")
-
     history = pd.read_sql_query(
         """
         SELECT
@@ -523,8 +518,6 @@ elif menu == "Patient History":
 # ANALYTICS
 # =========================================================
 elif menu == "Analytics":
-    st.header("📈 Hospital Analytics")
-
     st.subheader("📊 Appointment Status")
     status_df = pd.read_sql_query("SELECT status, COUNT(*) AS count FROM appointments GROUP BY status", conn)
     if status_df.empty:
@@ -549,8 +542,6 @@ elif menu == "Analytics":
 # REPORTS & FEEDBACK
 # =========================================================
 elif menu == "Reports & Feedback":
-    st.header("🧾 Medical Reports & Patient Feedback")
-
     patients = pd.read_sql_query("SELECT patient_id, patient_name FROM patients ORDER BY patient_name", conn)
     if patients.empty:
         st.info("No patients available.")
@@ -612,8 +603,6 @@ elif menu == "Reports & Feedback":
 # DISEASE PREDICTION
 # =========================================================
 elif menu == "Disease Prediction":
-    st.title("🔬 Disease Prediction")
-
     if model is None or vectorizer is None:
         st.error("Model or vectorizer assets missing (`disease_model.pkl` / `vectorizer.pkl`). Please ensure model files exist.")
         st.stop()
