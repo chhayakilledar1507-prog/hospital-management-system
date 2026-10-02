@@ -204,31 +204,106 @@ def generate_pdf_report(patient_df, appts_df):
     return buffer
 
 # =========================================================
-# LOGIN SYSTEM
+# PROFESSIONAL LOGIN SYSTEM
 # =========================================================
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.title("🏥 Smart Hospital Management & Recommendation System")
-    st.subheader("🔐 Login")
+    # Custom CSS for Professional Login Page
+    st.markdown("""
+        <style>
+            /* Hide top default Streamlit menu & padding */
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            .block-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+            
+            /* Professional Login Container */
+            .login-header {
+                text-align: center;
+                margin-bottom: 25px;
+            }
+            .login-header h1 {
+                font-size: 2.2rem;
+                color: #1E3A8A;
+                font-weight: 700;
+                margin-bottom: 5px;
+            }
+            .login-header p {
+                font-size: 0.95rem;
+                color: #64748B;
+            }
+            .stButton > button {
+                width: 100%;
+                background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%);
+                color: white;
+                font-size: 1rem;
+                font-weight: 600;
+                border-radius: 8px;
+                border: none;
+                padding: 0.6rem 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            }
+            .stButton > button:hover {
+                background: linear-gradient(90deg, #1D4ED8 0%, #1E40AF 100%);
+                box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.3);
+                transform: translateY(-1px);
+            }
+            .demo-badge {
+                background-color: #F1F5F9;
+                border-left: 4px solid #3B82F6;
+                padding: 12px 16px;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                color: #334155;
+                margin-top: 20px;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-    username = st.text_input("👤 Username", key="login_username")
-    password = st.text_input("🔑 Password", type="password", key="login_password")
+    # Centered Responsive Layout
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-    admin_user = st.secrets.get("ADMIN_USER", "admin")
-    admin_pass = st.secrets.get("ADMIN_PASS", "admin123")
+    with col2:
+        st.markdown("""
+            <div class="login-header">
+                <h1>🏥 Hospital Portal</h1>
+                <p>Smart Hospital Management & Recommendation System</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-    if st.button("🔐 Login", use_container_width=True, key="login_button"):
-        if username == admin_user and password == admin_pass:
-            st.session_state.logged_in = True
-            st.success("Login successful!")
-            st.rerun()
-        else:
-            st.error("Invalid username or password.")
+        with st.container(border=True):
+            st.subheader("🔑 Admin Sign In")
+            st.caption("Please enter your credentials to access the system.")
+            
+            username = st.text_input("Username", placeholder="Enter username", key="login_username")
+            password = st.text_input("Password", type="password", placeholder="Enter password", key="login_password")
 
-    st.info("Demo Login — Username: admin | Password: admin123")
+            admin_user = st.secrets.get("ADMIN_USER", "admin")
+            admin_pass = st.secrets.get("ADMIN_PASS", "admin123")
+
+            st.write("")
+            if st.button("🔐 Login to Portal", key="login_button"):
+                if username == admin_user and password == admin_pass:
+                    st.session_state.logged_in = True
+                    st.success("Authentication Successful! Redirecting...")
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password. Please try again.")
+
+            st.markdown("""
+                <div class="demo-badge">
+                    <strong>💡 Demo Credentials:</strong><br>
+                    • Username: <code>admin</code><br>
+                    • Password: <code>admin123</code>
+                </div>
+            """, unsafe_allow_html=True)
+
     st.stop()
 
 # =========================================================
@@ -666,9 +741,8 @@ elif menu == "Disease Prediction":
                     st.warning("Specific specialist mapping not available; recommending General Physician.")
 
                 # Available Doctors
-                st.markdown("### 👨‍‍⚕️ Available Doctors")
+                st.markdown("### 👨‍⚕️ Available Doctors")
 
-                # Clean query with GROUP BY and DISTINCT filtering to prevent multiple duplicate rows
                 available_doctors = pd.read_sql_query(
                     """
                     SELECT
@@ -706,7 +780,6 @@ elif menu == "Disease Prediction":
                         params=(f"%{specialist}%",)
                     )
 
-                # Remove duplicates if any
                 available_doctors = available_doctors.drop_duplicates(subset=["Doctor", "Specialist"])
 
                 if not available_doctors.empty:
