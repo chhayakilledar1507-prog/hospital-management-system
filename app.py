@@ -208,7 +208,7 @@ if menu == "Dashboard":
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("👤 Total Patients", total_patients)
-    col2.metric("👨‍⚕️ Total Doctors", total_doctors)
+    col2.metric("👨‍⚕️️ Total Doctors", total_doctors)
     col3.metric("📅 Total Appointments", total_appointments)
     col4.metric("⏳ Pending Appointments", pending)
 
@@ -342,7 +342,7 @@ elif menu == "Appointments":
             selected_patient_id = patient_options[st.selectbox("👤 Select Patient", list(patient_options.keys()))]
 
             doctor_options = {f"{row['doctor_name']} - {row['specialization']}": row["doctor_id"] for _, row in doctors.iterrows()}
-            selected_doctor_id = doctor_options[st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()))]}
+            selected_doctor_id = doctor_options[st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()))]
 
             appointment_date = st.date_input("📅 Appointment Date")
             appointment_time = st.time_input("⏰ Appointment Time")
@@ -387,7 +387,7 @@ elif menu == "Appointments":
 elif menu == "Doctors & Duty Schedule":
     st.header("👨‍⚕️ Doctors Directory & Duty Schedule")
     
-    tab1, tab2 = st.tabs(["👨‍‍⚕️ Doctors List", "🕒 Duty Schedules"])
+    tab1, tab2 = st.tabs(["👨‍⚕️ Doctors List", "🕒 Duty Schedules"])
     
     with tab1:
         doctors = pd.read_sql_query("SELECT doctor_id, doctor_name, specialization, phone, email, room_number FROM doctors", conn)
@@ -474,7 +474,7 @@ elif menu == "Analytics & Trends":
     with col1:
         doctors_df = pd.read_sql_query("SELECT specialization, COUNT(*) as count FROM doctors GROUP BY specialization", conn)
         if not doctors_df.empty:
-            fig1 = px.pie(doctors_df, values='count', names='specialization', title="👨‍‍⚕️ Doctors Specialization Distribution", hole=0.4)
+            fig1 = px.pie(doctors_df, values='count', names='specialization', title="👨‍⚕️ Doctors Specialization Distribution", hole=0.4)
             st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
