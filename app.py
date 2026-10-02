@@ -14,7 +14,7 @@ except ImportError:
     REPORTLAB_AVAILABLE = False
 
 st.set_page_config(
-    page_title="Smart Hospital Management System",
+    page_title="Smart Hospital Management & Recommendation System",
     page_icon="🏥",
     layout="wide"
 )
@@ -168,7 +168,7 @@ def generate_pdf_report(patient_df, appts_df):
     y = height - 50
 
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, "Smart Hospital Management System")
+    c.drawString(50, y, "Smart Hospital Management & Recommendation System")
     y -= 30
     c.setFont("Helvetica-Bold", 13)
     c.drawString(50, y, "Patient Medical Report")
@@ -211,7 +211,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.title("🏥 Smart Hospital Management System")
+    st.title("🏥 Smart Hospital Management & Recommendation System")
     st.subheader("🔐 Login")
 
     username = st.text_input("👤 Username", key="login_username")
@@ -235,7 +235,7 @@ if not st.session_state.logged_in:
 # NAVIGATION & SIDEBAR
 # =========================================================
 
-st.sidebar.title("🏥 Hospital System")
+st.sidebar.title("🏥 Smart Hospital Management & Recommendation System")
 
 if st.sidebar.button("🚪 Logout", use_container_width=True, key="logout_button"):
     st.session_state.logged_in = False
@@ -273,13 +273,13 @@ if menu == "Dashboard":
     c4.metric("⏳ Pending", pending_appointments)
 
     st.divider()
-    st.subheader("🏥 Smart Hospital Management System")
+    st.subheader("🏥 Smart Hospital Management & Recommendation System")
     st.write("Welcome to the Smart Hospital Management & Recommendation System.")
 
     st.subheader("✨ Key Features")
     st.markdown("🔬 **Disease Prediction** — Predict possible diseases based on symptoms.")
     st.markdown("🩺 **Specialist Recommendation** — Recommends matching medical specialists.")
-    st.markdown("👨‍⚕️ **Doctor Management** — Schedule and duty roster monitoring.")
+    st.markdown("👨‍⚕️️ **Doctor Management** — Schedule and duty roster monitoring.")
     st.markdown("👤 **Patient Records** — Complete intake and demographic tracking.")
     st.markdown("📅 **Appointments** — Integrated scheduling and status tracking.")
 
@@ -546,7 +546,7 @@ elif menu == "Analytics":
         st.line_chart(trend_df["appointments"])
 
 # =========================================================
-# REPORTS & FEEDBACK (FIXED SECTION)
+# REPORTS & FEEDBACK
 # =========================================================
 elif menu == "Reports & Feedback":
     st.header("🧾 Medical Reports & Patient Feedback")
