@@ -25,7 +25,7 @@ st.set_page_config(
 
 @st.cache_resource
 def get_db_connection():
-    """Returns a cached SQLite connection and ensures all tables exist."""
+    """Returns a cached SQLite connection and ensures all tables exist with correct schema."""
     conn = sqlite3.connect("hospital.db", check_same_thread=False)
     
     conn.executescript("""
@@ -93,6 +93,19 @@ def get_db_connection():
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id)
     );
     """)
+    
+    # Check if any old feedback table is missing columns and fix dynamically
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(feedback)")
+    columns = [col[1] for col in cursor.fetchall()]
+    
+    if "feedback_date" not in columns and len(columns) > 0:
+        cursor.execute("ALTER TABLE feedback ADD COLUMN feedback_date TEXT")
+    if "comments" not in columns and len(columns) > 0:
+        cursor.execute("ALTER TABLE feedback ADD COLUMN comments TEXT")
+    if "rating" not in columns and len(columns) > 0:
+        cursor.execute("ALTER TABLE feedback ADD COLUMN rating INTEGER")
+        
     conn.commit()
     return conn
 
@@ -211,18 +224,14 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    # Custom CSS for Professional Login Page
     st.markdown("""
         <style>
-            /* Hide top default Streamlit menu & padding */
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             .block-container {
                 padding-top: 2rem;
                 padding-bottom: 2rem;
             }
-            
-            /* Professional Login Container */
             .login-header {
                 text-align: center;
                 margin-bottom: 25px;
@@ -266,7 +275,6 @@ if not st.session_state.logged_in:
         </style>
     """, unsafe_allow_html=True)
 
-    # Centered Responsive Layout
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
@@ -675,14 +683,25 @@ elif menu == "Reports & Feedback":
         rating = st.slider("Rating", 1, 5, 5, key="feedback_rating")
         comments = st.text_area("Comments", key="feedback_comments")
         if st.button("⭐ Submit Feedback", use_container_width=True, key="submit_feedback"):
-            conn.execute("INSERT INTO feedback (patient_id, rating, comments, feedback_date) VALUES (?, ?, ?, ?)", (fmap[fp], rating, comments, date.today().strftime("%Y-%m-%d")))
-            conn.commit()
-            st.success("Thank you! Feedback submitted successfully.")
+            try:
+                conn.execute(
+                    "INSERT INTO feedback (patient_id, rating, comments, feedback_date) VALUES (?, ?, ?, ?)",
+                    (fmap[fp], rating, comments, date.today().strftime("%Y-%m-%d"))
+                )
+                conn.commit()
+                st.success("Thank you! Feedback submitted successfully.")
+                st.rerun()
+            except Exception as e:
+                conn.rollback()
+                st.error(f"Failed to submit feedback: {e}")
 
-    feedback = pd.read_sql_query("SELECT f.feedback_id, p.patient_name, f.rating, f.comments, f.feedback_date FROM feedback f LEFT JOIN patients p ON f.patient_id=p.patient_id ORDER BY f.feedback_id DESC", conn)
-    if not feedback.empty:
-        st.markdown("### 📋 Feedback Records")
-        st.dataframe(feedback, use_container_width=True, hide_index=True)
+    try:
+        feedback = pd.read_sql_query("SELECT f.feedback_id, p.patient_name, f.rating, f.comments, f.feedback_date FROM feedback f LEFT JOIN patients p ON f.patient_id=p.patient_id ORDER BY f.feedback_id DESC", conn)
+        if not feedback.empty:
+            st.markdown("### 📋 Feedback Records")
+            st.dataframe(feedback, use_container_width=True, hide_index=True)
+    except Exception:
+        pass
 
 # =========================================================
 # DISEASE PREDICTION
