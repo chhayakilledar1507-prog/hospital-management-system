@@ -235,7 +235,7 @@ if not st.session_state.logged_in:
 # MAIN HEADER & SIDEBAR NAVIGATION
 # =========================================================
 
-# Main System Title Header (Displays top of every page)
+# Main System Title Header (Top of page)
 st.title("🏥 Smart Hospital Management & Recommendation System")
 
 st.sidebar.title("Navigation")
@@ -258,6 +258,18 @@ menu = st.sidebar.radio(
     ]
 )
 
+# Dynamic Subtitle based on active page
+page_icons = {
+    "Dashboard": "📊",
+    "Disease Prediction": "🔬",
+    "Appointments": "📅",
+    "Doctors": "👨‍⚕️",
+    "Patients": "👤",
+    "Patient History": "📜",
+    "Analytics": "📈",
+    "Reports & Feedback": "🧾"
+}
+st.subheader(f"{page_icons.get(menu, '📌')} {menu}")
 st.divider()
 
 # =========================================================
@@ -271,21 +283,21 @@ if menu == "Dashboard":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("👤 Total Patients", total_patients)
-    c2.metric("👨‍⚕️ Total Doctors", total_doctors)
+    c2.metric("👨‍⚕️️ Total Doctors", total_doctors)
     c3.metric("📅 Total Appointments", total_appointments)
     c4.metric("⏳ Pending", pending_appointments)
 
     st.divider()
     st.write("Welcome to the Smart Hospital Management System.")
 
-    st.subheader("✨ Key Features")
+    st.markdown("### ✨ Key Features")
     st.markdown("🔬 **Disease Prediction** — Predict possible diseases based on symptoms.")
     st.markdown("🩺 **Specialist Recommendation** — Recommends matching medical specialists.")
     st.markdown("👨‍⚕ **Doctor Management** — Schedule and duty roster monitoring.")
     st.markdown("👤 **Patient Records** — Complete intake and demographic tracking.")
     st.markdown("📅 **Appointments** — Integrated scheduling and status tracking.")
 
-    st.subheader("📌 Quick Statistics")
+    st.markdown("### 📌 Quick Statistics")
     try:
         status_df = pd.read_sql_query("SELECT status, COUNT(*) AS count FROM appointments GROUP BY status", conn)
         if not status_df.empty:
@@ -314,7 +326,7 @@ elif menu == "Appointments":
         else:
             st.warning("No patients found. Please add a new patient.")
     else:
-        st.subheader("➕ New Patient Details")
+        st.markdown("### ➕ New Patient Details")
         new_patient_name = st.text_input("Patient Name", key="new_patient_name")
         col1, col2 = st.columns(2)
         with col1:
@@ -327,7 +339,7 @@ elif menu == "Appointments":
 
     doctor_options = {f"{row['doctor_name']} - {row['specialization']}": row["doctor_id"] for _, row in doctors.iterrows()}
     if doctor_options:
-        selected_doctor = st.selectbox("👨‍‍⚕️ Select Doctor", list(doctor_options.keys()), key="appointment_doctor")
+        selected_doctor = st.selectbox("👨‍⚕️ Select Doctor", list(doctor_options.keys()), key="appointment_doctor")
         selected_doctor_id = doctor_options[selected_doctor]
     else:
         st.warning("No doctors found.")
@@ -390,7 +402,7 @@ elif menu == "Appointments":
             conn.rollback()
             st.error(f"Unable to book appointment: {e}")
 
-    st.subheader("📋 Booked Appointments")
+    st.markdown("### 📋 Booked Appointments")
     appointments = pd.read_sql_query(
         """
         SELECT
@@ -409,7 +421,7 @@ elif menu == "Appointments":
     else:
         st.dataframe(appointments, use_container_width=True, hide_index=True)
 
-        st.subheader("🔄 Update Appointment Status")
+        st.markdown("### 🔄 Update Appointment Status")
         appointment_ids = appointments["appointment_id"].tolist()
         aid = st.selectbox("Select Appointment ID", appointment_ids, key="status_appointment_id")
         new_status = st.selectbox("New Status", ["Booked", "Confirmed", "Completed", "Cancelled", "Pending"], key="new_appointment_status")
@@ -426,7 +438,7 @@ elif menu == "Doctors":
     doctors = pd.read_sql_query("SELECT doctor_name, specialization, phone, email, room_number FROM doctors", conn)
     st.dataframe(doctors, use_container_width=True, hide_index=True)
 
-    st.subheader("🕒 Doctor Duty Schedule")
+    st.markdown("### 🕒 Doctor Duty Schedule")
     shifts = pd.read_sql_query(
         """
         SELECT
@@ -460,7 +472,7 @@ elif menu == "Patients":
         st.dataframe(patients, use_container_width=True, hide_index=True)
 
     st.divider()
-    st.subheader("➕ Register New Patient")
+    st.markdown("### ➕ Register New Patient")
     with st.form("patient_form"):
         name = st.text_input("Patient Name")
         a, b = st.columns(2)
@@ -518,7 +530,7 @@ elif menu == "Patient History":
 # ANALYTICS
 # =========================================================
 elif menu == "Analytics":
-    st.subheader("📊 Appointment Status")
+    st.markdown("### 📊 Appointment Status")
     status_df = pd.read_sql_query("SELECT status, COUNT(*) AS count FROM appointments GROUP BY status", conn)
     if status_df.empty:
         st.info("No appointment data available.")
@@ -526,12 +538,12 @@ elif menu == "Analytics":
         st.bar_chart(status_df.set_index("status")["count"])
         st.dataframe(status_df, use_container_width=True, hide_index=True)
 
-    st.subheader("🏥 Department / Specialist-wise Doctors")
+    st.markdown("### 🏥 Department / Specialist-wise Doctors")
     spec_df = pd.read_sql_query("SELECT specialization, COUNT(*) AS doctors FROM doctors GROUP BY specialization ORDER BY doctors DESC", conn)
     if not spec_df.empty:
         st.bar_chart(spec_df.set_index("specialization")["doctors"])
 
-    st.subheader("📅 Appointment Trend")
+    st.markdown("### 📅 Appointment Trend")
     trend_df = pd.read_sql_query("SELECT appointment_date, COUNT(*) AS appointments FROM appointments GROUP BY appointment_date ORDER BY appointment_date", conn)
     if not trend_df.empty:
         trend_df["appointment_date"] = pd.to_datetime(trend_df["appointment_date"], errors="coerce")
@@ -554,16 +566,16 @@ elif menu == "Reports & Feedback":
         history = pd.read_sql_query("""SELECT ph.visit_date, d.doctor_name, ph.department, ph.symptoms, ph.notes FROM patient_history ph LEFT JOIN doctors d ON ph.doctor_id=d.doctor_id WHERE ph.patient_id=? ORDER BY ph.visit_date DESC""", conn, params=(pid,))
         appts = pd.read_sql_query("""SELECT a.appointment_date, a.appointment_time, d.doctor_name, d.specialization, a.status, a.reason FROM appointments a LEFT JOIN doctors d ON a.doctor_id=d.doctor_id WHERE a.patient_id=? ORDER BY a.appointment_date DESC""", conn, params=(pid,))
 
-        st.subheader("📋 Patient Summary")
+        st.markdown("### 📋 Patient Summary")
         st.dataframe(patient, use_container_width=True, hide_index=True)
         
-        st.subheader("📅 Appointments")
+        st.markdown("### 📅 Appointments")
         if not appts.empty:
             st.dataframe(appts, use_container_width=True, hide_index=True)
         else:
             st.info("No appointments found.")
 
-        st.subheader("📜 Medical History")
+        st.markdown("### 📜 Medical History")
         if not history.empty:
             st.dataframe(history, use_container_width=True, hide_index=True)
         else:
@@ -582,7 +594,7 @@ elif menu == "Reports & Feedback":
             st.warning("PDF library is not installed. Add reportlab to requirements.txt for PDF reports.")
 
     st.divider()
-    st.subheader("⭐ Patient Feedback")
+    st.markdown("### ⭐ Patient Feedback")
     feedback_patients = pd.read_sql_query("SELECT patient_id, patient_name FROM patients ORDER BY patient_name", conn)
     if not feedback_patients.empty:
         fmap = {f"{r.patient_name} (ID: {r.patient_id})": int(r.patient_id) for _, r in feedback_patients.iterrows()}
@@ -596,7 +608,7 @@ elif menu == "Reports & Feedback":
 
     feedback = pd.read_sql_query("SELECT f.feedback_id, p.patient_name, f.rating, f.comments, f.feedback_date FROM feedback f LEFT JOIN patients p ON f.patient_id=p.patient_id ORDER BY f.feedback_id DESC", conn)
     if not feedback.empty:
-        st.subheader("📋 Feedback Records")
+        st.markdown("### 📋 Feedback Records")
         st.dataframe(feedback, use_container_width=True, hide_index=True)
 
 # =========================================================
@@ -637,7 +649,7 @@ elif menu == "Disease Prediction":
 
                 if not description_row.empty:
                     description = description_row.iloc[0]["Description"]
-                    st.subheader("📋 Disease Description")
+                    st.markdown("### 📋 Disease Description")
                     st.info(description)
                 else:
                     st.warning("Description not available.")
@@ -649,14 +661,14 @@ elif menu == "Disease Prediction":
 
                 if not specialist_row.empty:
                     specialist = specialist_row.iloc[0]["Specialist"]
-                    st.subheader("🩺 Recommended Specialist")
+                    st.markdown("### 🩺 Recommended Specialist")
                     st.success(specialist)
                 else:
                     specialist = "General Physician"
                     st.warning("Specific specialist mapping not available; recommending General Physician.")
 
                 # Available Doctors
-                st.subheader("👨‍⚕️ Available Doctors")
+                st.markdown("### 👨‍⚕️ Available Doctors")
                 available_doctors = pd.read_sql_query(
                     """
                     SELECT
